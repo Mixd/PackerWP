@@ -1,0 +1,20 @@
+{
+    "production": {
+        "host": "",
+        "database": "",
+        "username": "",
+        "password": ""
+    },
+    "staging": {
+        "host": "",
+        "database": "",
+        "username": "",
+        "password": ""
+    },
+    "local": {
+        "host": "",
+        "database": "",
+        "username": "",
+        "password": ""
+    }
+}

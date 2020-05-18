@@ -1,0 +1,16 @@
+<?php
+namespace Deployer;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Setup Environment
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+host('user@host')
+    // The Git branch this environment should be attached to.
+    ->set('branch', 'development')
+    // The environment's name. To be used in commands and other references.
+    ->stage('staging')
+    // The URL of the website in this environment.
+    ->set('stage_url', 'https://www.site.com')
+    // The deploy path to the website on this environment's server.
+    ->set('deploy_path', '/var/www/vhosts/site.com/httpdocs');

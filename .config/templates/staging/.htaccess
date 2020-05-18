@@ -1,0 +1,43 @@
+# ----------------------
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+
+# END WordPress
+
+# RedirectMatch 301 ^/containing.*$ http://www.mixd.co.uk/to/here
+
+# Mixd Legal 301 Redirects
+Redirect 301 /privacy https://www.mixd.co.uk/legal/privacy-policy
+Redirect 301 /terms/sla https://www.mixd.co.uk/legal/sla
+Redirect 301 /terms/aup https://www.mixd.co.uk/legal/aup
+Redirect 301 /terms/hosting https://www.mixd.co.uk/legal/hosting
+Redirect 301 /warranty https://www.mixd.co.uk/legal/warranty
+Redirect 301 /terms https://www.mixd.co.uk/legal
+
+<IfModule mod_headers.c>
+    Header set Referrer-Policy "strict-origin"
+    Header set Feature-Policy "layout-animations 'none'; unoptimized-images 'none'; oversized-images 'none'; sync-script 'none'; sync-xhr 'none'; unsized-media 'none';"
+
+    # To break onto a new line, add a backslash.
+    # The backslash *must* be the last character on the line
+    # any number of spaces/tabs are allowed
+    # the last line must always *exclude* a backslash
+    # terminate each "clause" with a semicolon at the end of the last value
+    Header set Content-Security-Policy "\
+	default-src 'self'; \
+	connect-src 'self' https://yoast.com/feed/widget/; \
+	font-src 'self' data: https://fonts.gstatic.com; \
+	frame-src 'self' https://disqus.com https://www.google.com https://www.youtube.com; \
+	img-src 'self' data: https://5478309ae1210a621c23-1662b01a207d37d3fdb98655d1bab150.ssl.cf3.rackcdn.com/ https://maps.googleapis.com https://maps.gstatic.com https://secure.gravatar.com; \
+	script-src 'self' 'unsafe-eval' 'unsafe-inline' https://api.tiles.mapbox.com/ https://connect.facebook.net/en_US/fbevents.js https://maps.googleapis.com/maps-api-v3/api/js/36/10a/intl/en_gb/common.js https://maps.googleapis.com/maps-api-v3/api/js/36/10a/intl/en_gb/controls.js https://maps.googleapis.com/maps-api-v3/api/js/36/10a/intl/en_gb/map.js https://maps.googleapis.com/maps-api-v3/api/js/36/10a/intl/en_gb/marker.js https://maps.googleapis.com/maps-api-v3/api/js/36/10a/intl/en_gb/onion.js https://maps.googleapis.com/maps-api-v3/api/js/36/10a/intl/en_gb/util.js https://maps.googleapis.com/maps/api/js https://maps.googleapis.com/maps/api/js/AuthenticationService.Authenticate https://maps.googleapis.com/maps/api/js/QuotaService.RecordEvent https://maps.googleapis.com/maps/api/js/ViewportInfoService.GetViewportInfo https://maps.googleapis.com/maps/vt https://mixdweb.disqus.com/embed.js https://static.ads-twitter.com/uwt.js https://www.google-analytics.com/analytics.js https://www.google.com/recaptcha/api.js https://www.gstatic.com/; \
+	style-src 'self' 'unsafe-inline' https://api.tiles.mapbox.com/ https://fonts.googleapis.com/; \
+	form-action 'self'; \
+    "
+</IfModule>
