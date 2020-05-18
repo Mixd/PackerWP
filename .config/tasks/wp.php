@@ -39,7 +39,7 @@ task('setup-remote-wp', function () {
     $db_password = $database["password"];
 
     // Prep remote files
-    run("cp {{release_path}}/.config/templates/{{stage}}/wp-config.php {{release_path}}/wp-config.php;");
+    run("cp {{release_path}}/.config/templates/{{stage}}/wp-config.example.php {{release_path}}/wp-config.php;");
     run("cp {{release_path}}/.config/templates/{{stage}}/.htaccess {{release_path}}/.htaccess;");
     run("cp {{release_path}}/.config/templates/{{stage}}/robots.txt {{release_path}}/robots.txt;");
 
@@ -89,7 +89,7 @@ task('setup-local-wp', function () {
     $db_password = $database["password"];
 
     // Prep remote files
-    run("cp ./.config/templates/local/wp-config.php ./wp-config.php;");
+    run("cp ./.config/templates/local/wp-config.example.php ./wp-config.php;");
     run("cp ./.config/templates/local/.htaccess ./.htaccess;");
     run("cp ./.config/templates/local/robots.txt ./robots.txt;");
 
