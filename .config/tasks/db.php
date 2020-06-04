@@ -19,11 +19,41 @@ desc('Push up a local copy of a database and import it into the remote host');
 task('push-local-db', [
     'deploy:lock',
     'prepare',
+    'confirm-db',
     'backup-local-db',
     'import-remote-db',
     'deploy:unlock',
     'success'
 ]);
+
+task('confirm-db', function () {
+    // Load database vars
+    $database = getDatabaseVars(get('stage'));
+    $db_host = $database["host"];
+    $db_database = $database["database"];
+
+    write("<error>
+========================================================================
+    WARNING: You're about to overwrite the database!
+========================================================================</error>
+
+    <comment>Environment: </comment><info>" . get('stage') . " </info>
+    <comment>Database name: </comment><info>" . $db_database . " </info>
+    ");
+
+    $confirm = askConfirmation("
+    Are you sure you wish to continue?",
+        false
+    );
+    if ($confirm !== true) {
+        writeln("<error>
+========================================================================
+    You did not want to continue so your task was aborted
+========================================================================</error>
+        ");
+        exit;
+    }
+});
 
 task('import-remote-db', function () {
     cd("{{release_path}}");
@@ -73,15 +103,3 @@ task('backup-local-db', function () {
         ['tty' => true, 'timeout' => null]
     );
 });
-
-/**
- * Load database variables for a given stage
- *
- * @param string $stage
- * @return array
- */
-function getDatabaseVars($stage)
-{
-    $database = json_decode(file_get_contents(realpath(__DIR__) . '/.config/database.json'), true);
-    return $database[$stage];
-}

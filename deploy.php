@@ -47,3 +47,20 @@ set('git_cache', true);
 
 // Disable usage data
 set('allow_anonymous_stats', false);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Helper functions
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Load database variables for a given stage
+ *
+ * @param string $stage
+ * @return array
+ */
+function getDatabaseVars($stage)
+{
+    $database = json_decode(file_get_contents(realpath(__DIR__) . '/.config/database.json'), true);
+    return $database[$stage];
+}
