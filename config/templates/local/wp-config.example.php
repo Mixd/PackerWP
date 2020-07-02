@@ -37,6 +37,14 @@ if (!defined('ABSPATH')) {
     define('ABSPATH', dirname(__FILE__) . '/');
 }
 
+/**
+ * Disable WordPress auto updates
+ * WordPress Codex: https://codex.wordpress.org/Configuring_Automatic_Background_Updates
+ */
+if (!defined('AUTOMATIC_UPDATER_DISABLED')) {
+    define('AUTOMATIC_UPDATER_DISABLED', true);
+}
+
 // Handle reverse proxy, passing the IP to the server.
 // This is used by some plugins to fetch the user's IP.
 if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {

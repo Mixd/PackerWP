@@ -12,6 +12,7 @@ task('setup-wp', [
     'deploy:lock',
     'deploy:release',
     'deploy:update_code',
+    'composer-install',
     'setup-remote-wp',
     'deploy:shared',
     'deploy:writable',
@@ -36,12 +37,12 @@ task('setup-remote-wp', function () {
     $db_host = $database["host"];
     $db_database = $database["database"];
     $db_username = $database["username"];
-    $db_password = $database["password"];
+    $db_password = str_replace("#", "\#", $database["password"]);
 
     // Prep remote files
-    run("cp {{release_path}}/.config/templates/{{stage}}/wp-config.example.php {{release_path}}/wp-config.php;");
-    run("cp {{release_path}}/.config/templates/{{stage}}/.htaccess {{release_path}}/.htaccess;");
-    run("cp {{release_path}}/.config/templates/{{stage}}/robots.txt {{release_path}}/robots.txt;");
+    run("cp {{release_path}}/config/templates/{{stage}}/wp-config.example.php {{release_path}}/wp-config.php;");
+    run("cp {{release_path}}/config/templates/{{stage}}/.htaccess {{release_path}}/.htaccess;");
+    run("cp {{release_path}}/config/templates/{{stage}}/robots.txt {{release_path}}/robots.txt;");
 
     // Run a search-replace with the necessary values
     run("
@@ -53,10 +54,11 @@ task('setup-remote-wp', function () {
     ");
 
     // Run the wp install
-    run("cd {{release_path}} && wp core install --url='" . $domain . "' --title='" . $wp_sitename . "' --admin_user='" . $wp_user . "' --admin_password='" . $wp_pwd . "' --admin_email='" . $wp_email . "'");
+    cd('{{release_path}}');
+    run("wp core install --url='" . $domain . "' --title='" . $wp_sitename . "' --admin_user='" . $wp_user . "' --admin_password='" . $wp_pwd . "' --admin_email='" . $wp_email . "'");
 
     // Shuffle the salts
-    run("cd {{release_path}}; wp config shuffle-salts");
+    run("wp config shuffle-salts");
 
     write("
     \e[32m
@@ -89,12 +91,12 @@ task('setup-local-wp', function () {
     $db_password = $database["password"];
 
     // Prep remote files
-    run("cp ./.config/templates/local/wp-config.example.php ./wp-config.php;");
-    run("cp ./.config/templates/local/.htaccess ./.htaccess;");
-    run("cp ./.config/templates/local/robots.txt ./robots.txt;");
+    runLocally("cp ./config/templates/local/wp-config.example.php ./wp-config.php;");
+    runLocally("cp ./config/templates/local/.htaccess ./.htaccess;");
+    runLocally("cp ./config/templates/local/robots.txt ./robots.txt;");
 
     // Run a search-replace with the necessary values
-    run("
+    runLocally("
         sed -i '' 's#<<< DATABASE NAME >>>#" . $db_database . "#g' ./wp-config.php;
         sed -i '' 's#<<< DATABASE USER >>>#" . $db_username . "#g' ./wp-config.php;
         sed -i '' 's#<<< DATABASE PWD >>>#" . $db_password . "#g' ./wp-config.php;
@@ -103,7 +105,7 @@ task('setup-local-wp', function () {
     ");
 
     // Run the wp install
-    run("
+    runLocally("
         wp core install \
         --url='" . $domain . "' \
         --title='" . $wp_sitename . "' \
@@ -113,7 +115,7 @@ task('setup-local-wp', function () {
     ");
 
     // Shuffle the salts
-    run("wp config shuffle-salts");
+    runLocally("wp config shuffle-salts");
 
     write("
     \e[32m
@@ -128,6 +130,7 @@ task('setup-local-wp', function () {
     \e[0m
     ");
 })->local();
+after('setup-local-wp', 'composer-install-local');
 
 desc('Deploy your project');
 task('deploy', [
@@ -137,6 +140,7 @@ task('deploy', [
     'deploy:update_code',
     'deploy:shared',
     'deploy:writable',
+    'composer-install',
     'deploy:clear_paths',
     'deploy:symlink',
     'deploy:unlock',
@@ -151,12 +155,41 @@ task('signoff', function () {
     run('echo "Branch ({{branch}}) deployed by ({{user}}) for release ({{release_name}})" > revisions.log');
 });
 
-desc('Update your local version of WordPress');
-task('update-wp', function () {
-    cd('wordpress');
-    run('git fetch --tags');
-    run(
-        'latestTag=$(git tag -l --sort -version:refname | head -n 1) && git checkout $latestTag',
-        ['tty' => true]
+desc('Reset the super admin password');
+task('reset-admin-pwd', function () {
+    $wp_pwd = bin2hex(openssl_random_pseudo_bytes(8));
+    $wp_user = get('wp_user');
+    $confirm = askConfirmation("
+    Are you sure you wish to reset the password for '" . $wp_user . "'?",
+        false
     );
-})->local();
+    if ($confirm !== true) {
+        writeln("<error>
+========================================================================
+    You did not want to continue so your task was aborted
+========================================================================</error>
+        ");
+        exit;
+    }
+
+    cd("{{release_path}}");
+    run("wp user update " . $wp_user . " --skip-email --user_pass='" . $wp_pwd . "'");
+    run("wp config shuffle-salts");
+    writeln("<info>
+========================================================================
+    Your password has been set to '" . $wp_pwd . "'
+========================================================================</info>");
+});
+
+/**
+ * Disabled due to using package.json for managing dependencies
+ */
+// desc('Update your local version of WordPress');
+// task('update-wp', function () {
+//     cd('wordpress');
+//     run('git fetch --tags');
+//     run(
+//         'latestTag=$(git tag -l --sort -version:refname | head -n 1) && git checkout $latestTag',
+//         ['tty' => true]
+//     );
+// })->local();

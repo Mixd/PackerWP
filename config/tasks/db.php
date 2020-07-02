@@ -7,8 +7,8 @@ namespace Deployer;
 
 desc('Pull down a copy of the database from the remote host and import it into your local env');
 task('pull-remote-db', [
-    'deploy:lock',
     'prepare',
+    'deploy:lock',
     'backup-remote-db',
     'import-local-db',
     'deploy:unlock',
@@ -17,9 +17,9 @@ task('pull-remote-db', [
 
 desc('Push up a local copy of a database and import it into the remote host');
 task('push-local-db', [
-    'deploy:lock',
     'prepare',
     'confirm-db',
+    'deploy:lock',
     'backup-local-db',
     'import-remote-db',
     'deploy:unlock',
@@ -28,8 +28,7 @@ task('push-local-db', [
 
 task('confirm-db', function () {
     // Load database vars
-    $database = getDatabaseVars(get('stage'));
-    $db_host = $database["host"];
+    $database = get('database_vars');
     $db_database = $database["database"];
 
     write("<error>

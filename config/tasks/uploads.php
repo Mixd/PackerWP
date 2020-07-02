@@ -7,22 +7,20 @@ namespace Deployer;
 
 desc('Pull media from a remote host');
 task('pull-remote-uploads', function () {
-    $server = Task\Context::get()->getHost();
-    $host = $server->getRealHostname();
-    runLocally(
-        'rsync -avzO ' . $host . ':{{deploy_path}}/shared/content/uploads/ content/uploads/ --progress',
-        ['tty' => true, 'timeout' => null]
+    download(
+        "{{current_path}}/content/uploads/",
+        "content/uploads/",
+        ["flags" => "rzcE"]
     );
     write("Completed");
 });
 
 desc('Push media to a remote host');
 task('push-local-uploads', function () {
-    $server = Task\Context::get()->getHost();
-    $host = $server->getRealHostname();
-    runLocally(
-        'rsync -avzO content/uploads/ ' . $host . ':{{deploy_path}}/shared/content/uploads/ --progress',
-        ['tty' => true, 'timeout' => null]
+    upload(
+        "content/uploads/",
+        "{{current_path}}/content/uploads/",
+        ["flags" => "rzcE"]
     );
     write("Completed");
 });

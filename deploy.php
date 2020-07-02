@@ -6,38 +6,61 @@ namespace Deployer;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 require 'recipe/common.php';
-require realpath(__DIR__) . '/.config/app.php';
+require realpath(__DIR__) . '/config/app.php';
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Environments
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-require realpath(__DIR__) . '/.config/deploy/staging.php';
-require realpath(__DIR__) . '/.config/deploy/production.php';
+if (file_exists(realpath(__DIR__) . '/config/deploy/staging.php')) {
+    require realpath(__DIR__) . '/config/deploy/staging.php';
+}
+if (file_exists(realpath(__DIR__) . '/config/deploy/production.php')) {
+    require realpath(__DIR__) . '/config/deploy/production.php';
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Tasks
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-require realpath(__DIR__) . '/.config/tasks/db.php';
-require realpath(__DIR__) . '/.config/tasks/uploads.php';
-require realpath(__DIR__) . '/.config/tasks/wp.php';
+require realpath(__DIR__) . '/config/tasks/fractal.php';
+require realpath(__DIR__) . '/config/tasks/db.php';
+require realpath(__DIR__) . '/config/tasks/uploads.php';
+require realpath(__DIR__) . '/config/tasks/wp.php';
+require realpath(__DIR__) . '/config/tasks/composer.php';
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Below be dragons - tread carefully!
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Define a list of files that should be shared between deployments
-set('shared_files', ['wp-config.php', '.htaccess', 'robots.txt']);
+set('shared_files', [
+    'wp-config.php',
+    '.htaccess',
+    'robots.txt'
+]);
 
 // Allow interaction for Git clone
 set('git_tty', true);
 
 // Define a directory that is shared between deployments
-set('shared_dirs', 'content/uploads');
+set('shared_dirs', [
+    'content/uploads',
+    'design-system'
+]);
 
 // Define web user writeable directories
-set('writable_dirs', 'content/uploads');
+set('writable_dirs', [
+    'content/uploads',
+    'content/cache'
+]);
+
+// Use ACL to extend existing permissions
+set('writable_mode', 'acl'); // chmod, chown, chgrp or acl.
+
+// Set apache config options
+set('http_user', 'www-data');
+set('http_group', 'www-data');
 
 // Every release should be datetime stamped
 set('release_name', date('YmdHis'));
@@ -55,12 +78,10 @@ set('allow_anonymous_stats', false);
 
 /**
  * Load database variables for a given stage
- *
- * @param string $stage
  * @return array
  */
-function getDatabaseVars($stage)
-{
-    $database = json_decode(file_get_contents(realpath(__DIR__) . '/.config/database.json'), true);
+set('database_vars', function () {
+    $stage = get("stage");
+    $database = json_decode(file_get_contents(realpath(__DIR__) . '/config/database.json'), true);
     return $database[$stage];
-}
+});
