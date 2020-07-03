@@ -23,11 +23,15 @@ if (file_exists(realpath(__DIR__) . '/config/deploy/production.php')) {
 //// Tasks
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-require realpath(__DIR__) . '/config/tasks/fractal.php';
-require realpath(__DIR__) . '/config/tasks/db.php';
-require realpath(__DIR__) . '/config/tasks/uploads.php';
-require realpath(__DIR__) . '/config/tasks/wp.php';
-require realpath(__DIR__) . '/config/tasks/composer.php';
+$autoload = array_diff(
+    scandir(realpath(__DIR__) . '/config/tasks/', SCANDIR_SORT_ASCENDING),
+    ['..', '.', '.DS_Store']
+);
+if (!empty($autoload)) {
+    array_map(function ($task) {
+        require_once realpath(__DIR__) . '/config/tasks/' . $task;
+    }, $autoload);
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Below be dragons - tread carefully!
@@ -45,8 +49,7 @@ set('git_tty', true);
 
 // Define a directory that is shared between deployments
 set('shared_dirs', [
-    'content/uploads',
-    'design-system'
+    'content/uploads'
 ]);
 
 // Define web user writeable directories
