@@ -26,6 +26,45 @@ if (!empty($autoload)) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Environments
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$env_path = realpath(__DIR__) . "/config/";
+$dotenv = Dotenv::createImmutable($env_path, ".env");
+$dotenv->load();
+$dotenv->required([
+    'WP_USER',
+    'WP_EMAIL',
+    'WP_SITENAME',
+    'WP_LOCALURL',
+    'REPOSITORY',
+    'LOCAL_DB_HOST',
+    'LOCAL_DB_NAME',
+    'LOCAL_DB_USER',
+    'LOCAL_DB_PASS',
+])->notEmpty();
+
+$hosts = [
+    "STAGING",
+    "PRODUCTION"
+];
+
+foreach ($hosts as $env) {
+    $stage = strtolower($env);
+    $host = null;
+    if ($_ENV[$env . "_HOST"]) {
+        $host = host($stage)
+            ->hostname($_ENV[$env . "_HOST"])
+            ->user($_ENV[$env . "_DEPLOY_USER"])
+            ->stage($stage)
+            ->forwardAgent(true)
+            ->set('branch', $_ENV[$env . "_BRANCH"])
+            ->set('stage_url', $_ENV[$env . "_STAGE_URL"])
+            ->set('deploy_path', $_ENV[$env . "_DEPLOY_PATH"]);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Below be dragons - tread carefully!
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -66,50 +105,14 @@ set('http_group', 'www-data');
 // Every release should be datetime stamped
 set('release_name', date('YmdHis'));
 
+// register the repo
+set('repository', $_ENV["REPOSITORY"]);
+
 // Try to use git cache where applicable
 set('git_cache', true);
 
 // Disable usage data
 set('allow_anonymous_stats', false);
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Environments
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$env_path = realpath(__DIR__) . "/config/";
-$dotenv = Dotenv::createImmutable($env_path, ".env");
-$dotenv->load();
-$dotenv->required([
-    'WP_USER',
-    'WP_EMAIL',
-    'WP_SITENAME',
-    'WP_LOCALURL',
-    'REPOSITORY',
-    'LOCAL_DB_HOST',
-    'LOCAL_DB_NAME',
-    'LOCAL_DB_USER',
-    'LOCAL_DB_PASS',
-])->notEmpty();
-
-$hosts = [
-    "STAGING",
-    "PRODUCTION"
-];
-
-foreach ($hosts as $env) {
-    $stage = strtolower($env);
-    $host = null;
-    if ($_ENV[$env . "_HOST"]) {
-        $host = host($stage)
-            ->hostname($_ENV[$env . "_HOST"])
-            ->user($_ENV[$env . "_DEPLOY_USER"])
-            ->stage($stage)
-            ->forwardAgent(true)
-            ->set('branch', $_ENV[$env . "_BRANCH"])
-            ->set('stage_url', $_ENV[$env . "_STAGE_URL"])
-            ->set('deploy_path', $_ENV[$env . "_DEPLOY_PATH"]);
-    }
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Master runbook
@@ -137,12 +140,10 @@ task('deploy', [
 
 task('deploy:clear_paths')->setPrivate();
 task('deploy:copy_dirs')->setPrivate();
-task('deploy:lock')->setPrivate();
 task('deploy:prepare')->setPrivate();
 task('deploy:release')->setPrivate();
 task('deploy:shared')->setPrivate();
 task('deploy:symlink')->setPrivate();
-task('deploy:unlock')->setPrivate();
 task('deploy:update_code')->setPrivate();
 task('deploy:vendors')->setPrivate();
 task('deploy:writable')->setPrivate();
