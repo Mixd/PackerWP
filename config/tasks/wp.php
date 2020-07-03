@@ -181,15 +181,8 @@ task('reset-admin-pwd', function () {
 ========================================================================</info>");
 });
 
-/**
- * Disabled due to using package.json for managing dependencies
- */
-// desc('Update your local version of WordPress');
-// task('update-wp', function () {
-//     cd('wordpress');
-//     run('git fetch --tags');
-//     run(
-//         'latestTag=$(git tag -l --sort -version:refname | head -n 1) && git checkout $latestTag',
-//         ['tty' => true]
-//     );
-// })->local();
+desc('Pull both WordPress uploads and a database from a given host');
+task('pull', [
+    'pull-remote-db',
+    'pull-remote-uploads'
+]);
