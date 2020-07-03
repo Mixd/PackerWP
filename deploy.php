@@ -1,23 +1,15 @@
 <?php
+
 namespace Deployer;
+
+use Dotenv\Dotenv;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Dependencies
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 require 'recipe/common.php';
-require realpath(__DIR__) . '/config/app.php';
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Environments
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-if (file_exists(realpath(__DIR__) . '/config/deploy/staging.php')) {
-    require realpath(__DIR__) . '/config/deploy/staging.php';
-}
-if (file_exists(realpath(__DIR__) . '/config/deploy/production.php')) {
-    require realpath(__DIR__) . '/config/deploy/production.php';
-}
+require realpath(__DIR__) . '/vendor/autoload.php';
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Tasks
@@ -43,6 +35,9 @@ set('shared_files', [
     '.htaccess',
     'robots.txt'
 ]);
+
+// Default to 'staging' env
+set('default_stage', 'staging');
 
 // Allow interaction for Git clone
 set('git_tty', true);
@@ -74,17 +69,21 @@ set('git_cache', true);
 // Disable usage data
 set('allow_anonymous_stats', false);
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Helper functions
+//// Environments
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Load database variables for a given stage
- * @return array
- */
-set('database_vars', function () {
-    $stage = get("stage");
-    $database = json_decode(file_get_contents(realpath(__DIR__) . '/config/database.json'), true);
-    return $database[$stage];
-});
+$env_path = realpath(__DIR__) . "/config/";
+$dotenv = Dotenv::createImmutable($env_path, ".env");
+$dotenv->load();
+$dotenv->required([
+    'WP_USER',
+    'WP_EMAIL',
+    'WP_SITENAME',
+    'WP_LOCALURL',
+    'REPOSITORY',
+    'LOCAL_DB_HOST',
+    'LOCAL_DB_NAME',
+    'LOCAL_DB_USER',
+    'LOCAL_DB_PASS',
+])->notEmpty();

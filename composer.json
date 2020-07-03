@@ -1,0 +1,18 @@
+{
+    "name": "mixd/packerwp",
+    "description": "A deployment tool lovingly crafted by Mixd",
+    "type": "library",
+    "require": {
+        "vlucas/phpdotenv": "^5.0"
+    },
+    "license": "GPLv3",
+    "authors": [
+        {
+            "name": "Ash Davies",
+            "email": "support@mixd.co.uk"
+        }
+    ],
+    "scripts": {
+        "pre-update-cmd": "curl -LO https://deployer.org/deployer.phar; mv deployer.phar /usr/local/bin/dep; chmod +x /usr/local/bin/dep"
+    }
+}
