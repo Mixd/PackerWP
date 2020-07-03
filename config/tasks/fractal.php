@@ -1,4 +1,5 @@
 <?php
+
 namespace Deployer;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -6,10 +7,14 @@ namespace Deployer;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 set('bin/npm', function () {
-    return run('which npm');
+    if (commandExist('npm')) {
+        return run('which npm');
+    } else {
+        error('Unable to find npm');
+        return;
+    }
 });
 
-desc('Install npm packages');
 task('npm:install', function () {
     if (has('previous_release')) {
         if (test('[ -d {{previous_release}}/node_modules ]')) {
@@ -22,13 +27,11 @@ task('npm:install', function () {
         }
     }
     run("cd {{release_path}} && {{bin/npm}} install");
-});
+})->setPrivate();
 
-desc('Build Fractal pattern library');
 task('fractal-build', function () {
-    invoke('npm:install');
-    writeln("<info>Building pattern library</info>");
     run("cd {{release_path}} && {{bin/npm}} run build:fractal", ['tty' => true]);
-});
+})->desc('Build Fractal pattern library');
 
+before('fractal-build', 'npm:install');
 after('deploy:symlink', 'fractal-build');

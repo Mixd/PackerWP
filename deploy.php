@@ -29,6 +29,9 @@ if (!empty($autoload)) {
 //// Below be dragons - tread carefully!
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Define the project root
+set('abspath', realpath(__DIR__));
+
 // Define a list of files that should be shared between deployments
 set('shared_files', [
     'wp-config.php',
@@ -87,3 +90,60 @@ $dotenv->required([
     'LOCAL_DB_USER',
     'LOCAL_DB_PASS',
 ])->notEmpty();
+
+$hosts = [
+    "STAGING",
+    "PRODUCTION"
+];
+
+foreach ($hosts as $env) {
+    $stage = strtolower($env);
+    $host = null;
+    if ($_ENV[$env . "_HOST"]) {
+        $host = host($stage)
+            ->hostname($_ENV[$env . "_HOST"])
+            ->user($_ENV[$env . "_DEPLOY_USER"])
+            ->stage($stage)
+            ->forwardAgent(true)
+            ->set('branch', $_ENV[$env . "_BRANCH"])
+            ->set('stage_url', $_ENV[$env . "_STAGE_URL"])
+            ->set('deploy_path', $_ENV[$env . "_DEPLOY_PATH"]);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Master runbook
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+task('deploy', [
+    'deploy:info',
+    'deploy:lock',
+    'deploy:release',
+    'deploy:update_code',
+    'deploy:shared',
+    'deploy:writable',
+    'composer-install',
+    'deploy:clear_paths',
+    'deploy:symlink',
+    'deploy:unlock',
+    'cleanup',
+    'signoff',
+    'success'
+])->desc('Deploy your project');
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Hide uncommon tasks from the CLI
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+task('deploy:clear_paths')->setPrivate();
+task('deploy:copy_dirs')->setPrivate();
+task('deploy:lock')->setPrivate();
+task('deploy:prepare')->setPrivate();
+task('deploy:release')->setPrivate();
+task('deploy:shared')->setPrivate();
+task('deploy:symlink')->setPrivate();
+task('deploy:unlock')->setPrivate();
+task('deploy:update_code')->setPrivate();
+task('deploy:vendors')->setPrivate();
+task('deploy:writable')->setPrivate();
+task('cleanup')->setPrivate();

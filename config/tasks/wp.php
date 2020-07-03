@@ -1,61 +1,65 @@
 <?php
+
 namespace Deployer;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// WordPress uploads folder related tasks
+//// WordPress setup related tasks
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-desc('Set up your project on the remote host');
 task('setup-wp', [
     'deploy:info',
     'deploy:prepare',
     'deploy:lock',
     'deploy:release',
     'deploy:update_code',
-    'composer-install',
-    'setup-remote-wp',
+    'setup:wp:remote',
     'deploy:shared',
     'deploy:writable',
     'deploy:clear_paths',
     'deploy:symlink',
     'deploy:unlock',
-    'cleanup',
-    'success'
-]);
+    'cleanup'
+])->desc('Set up your project on the remote host');
 
-// setup-remote-wp - Sets up any templated config files
-task('setup-remote-wp', function () {
-    // Load app vars
-    $domain = get('stage_url');
-    $wp_user = get('wp_user');
-    $wp_email = get('wp_email');
-    $wp_sitename = get('wp_sitename');
-    $wp_pwd = bin2hex(openssl_random_pseudo_bytes(8));
+task('setup:wp:remote', function () {
+    $stage = get('stage');
+    $domain = $_ENV[strtoupper($stage) . "_STAGE_URL"];
+    $db_host = $_ENV[strtoupper($stage) . "_DB_HOST"];
+    $db_name = $_ENV[strtoupper($stage) . "_DB_NAME"];
+    $db_username = $_ENV[strtoupper($stage) . "_DB_USER"];
+    $db_password = str_replace("#", "\#", $_ENV[strtoupper($stage) . "_DB_PASS"]);
+    $wp_user = $_ENV["WP_USER"];
+    $wp_email = $_ENV["WP_EMAIL"];
+    $wp_sitename = $_ENV["WP_SITENAME"];
+    $wp_pwd = bin2hex(openssl_random_pseudo_bytes(16));
 
-    // Load database vars
-    $database = getDatabaseVars(get('stage'));
-    $db_host = $database["host"];
-    $db_database = $database["database"];
-    $db_username = $database["username"];
-    $db_password = str_replace("#", "\#", $database["password"]);
+    cd('{{release_path}}');
 
-    // Prep remote files
-    run("cp {{release_path}}/config/templates/{{stage}}/wp-config.example.php {{release_path}}/wp-config.php;");
-    run("cp {{release_path}}/config/templates/{{stage}}/.htaccess {{release_path}}/.htaccess;");
-    run("cp {{release_path}}/config/templates/{{stage}}/robots.txt {{release_path}}/robots.txt;");
+    if (testLocally("wp core is-installed") && file_exists($abs . '/wp-config.php')) {
+        writeln("<error>Existing wp-config.php detected at '" . $abs . "/wp-config.php'</error>");
+        exit;
+    }
+
+    run("cp ./config/templates/{{stage}}/wp-config.example.php ./wp-config.php");
+    run("cp ./config/templates/{{stage}}/.htaccess ./.htaccess");
+    run("cp ./config/templates/{{stage}}/robots.txt ./robots.txt");
 
     // Run a search-replace with the necessary values
     run("
-        sed -i -- 's#<<< DATABASE NAME >>>#" . $db_database . "#g' {{release_path}}/wp-config.php;
-        sed -i -- 's#<<< DATABASE USER >>>#" . $db_username . "#g' {{release_path}}/wp-config.php;
-        sed -i -- 's#<<< DATABASE PWD >>>#" . $db_password . "#g' {{release_path}}/wp-config.php;
-        sed -i -- 's#<<< DATABASE HOST >>>#" . $db_host . "#g' {{release_path}}/wp-config.php;
-        sed -i -- 's#<<< WP SITE URL >>>#" . $domain . "#g' {{release_path}}/wp-config.php;
+        sed -i -- 's#<<< DATABASE NAME >>>#" . $db_name . "#g' ./wp-config.php;
+        sed -i -- 's#<<< DATABASE USER >>>#" . $db_username . "#g' ./wp-config.php;
+        sed -i -- 's#<<< DATABASE PWD >>>#" . $db_password . "#g' ./wp-config.php;
+        sed -i -- 's#<<< DATABASE HOST >>>#" . $db_host . "#g' ./wp-config.php;
+        sed -i -- 's#<<< WP SITE URL >>>#" . $domain . "#g' ./wp-config.php;
     ");
 
-    // Run the wp install
-    cd('{{release_path}}');
-    run("wp core install --url='" . $domain . "' --title='" . $wp_sitename . "' --admin_user='" . $wp_user . "' --admin_password='" . $wp_pwd . "' --admin_email='" . $wp_email . "'");
+    run('wp core install --url="' . $domain . '" \
+        --title="' . $wp_sitename . '" \
+        --admin_user="' . $wp_user . '" \
+        --admin_password="' . $wp_pwd . '" \
+        --admin_email="' . $wp_email . '" \
+        --skip-email
+    ');
 
     // Shuffle the salts
     run("wp config shuffle-salts");
@@ -72,47 +76,48 @@ task('setup-remote-wp', function () {
     =========================================================================
     \e[0m
     ");
-});
+})->setPrivate();
 
-desc('Set up your project locally');
+before('setup:wp:remote', 'composer-install');
+
 task('setup-local-wp', function () {
-    // Load app vars
-    $domain = get('wp_localurl');
-    $wp_user = get('wp_user');
-    $wp_email = get('wp_email');
-    $wp_sitename = get('wp_sitename');
-    $wp_pwd = bin2hex(openssl_random_pseudo_bytes(8));
+    $stage = 'local';
+    $db_host = $_ENV[strtoupper($stage) . "_DB_HOST"];
+    $db_name = $_ENV[strtoupper($stage) . "_DB_NAME"];
+    $db_username = $_ENV[strtoupper($stage) . "_DB_USER"];
+    $db_password = str_replace("#", "\#", $_ENV[strtoupper($stage) . "_DB_PASS"]);
+    $domain = $_ENV["WP_LOCALURL"];
+    $wp_user = $_ENV["WP_USER"];
+    $wp_email = $_ENV["WP_EMAIL"];
+    $wp_sitename = $_ENV["WP_SITENAME"];
+    $wp_pwd = bin2hex(openssl_random_pseudo_bytes(16));
+    $abs = get('abspath');
 
-    // Load database vars
-    $database = getDatabaseVars("local");
-    $db_host = $database["host"];
-    $db_database = $database["database"];
-    $db_username = $database["username"];
-    $db_password = $database["password"];
+    if (testLocally("wp core is-installed") && file_exists($abs . '/wp-config.php')) {
+        writeln("<error>Existing wp-config.php detected at '" . $abs . "/wp-config.php'</error>");
+        exit;
+    }
 
     // Prep remote files
-    runLocally("cp ./config/templates/local/wp-config.example.php ./wp-config.php;");
-    runLocally("cp ./config/templates/local/.htaccess ./.htaccess;");
-    runLocally("cp ./config/templates/local/robots.txt ./robots.txt;");
+    runLocally('cp "' . $abs . '/config/templates/local/wp-config.example.php" "' . $abs . '/wp-config.php"');
+    runLocally('cp "' . $abs . '/config/templates/local/.htaccess" "' . $abs . '/.htaccess"');
+    runLocally('cp "' . $abs . '/config/templates/local/robots.txt" "' . $abs . '/robots.txt"');
 
     // Run a search-replace with the necessary values
     runLocally("
-        sed -i '' 's#<<< DATABASE NAME >>>#" . $db_database . "#g' ./wp-config.php;
-        sed -i '' 's#<<< DATABASE USER >>>#" . $db_username . "#g' ./wp-config.php;
-        sed -i '' 's#<<< DATABASE PWD >>>#" . $db_password . "#g' ./wp-config.php;
-        sed -i '' 's#<<< DATABASE HOST >>>#" . $db_host . "#g' ./wp-config.php;
-        sed -i '' 's#<<< WP SITE URL >>>#" . $domain . "#g' ./wp-config.php;
+        sed -i '' 's#<<< DATABASE NAME >>>#" . $db_name . "#g' \"" . $abs . "/wp-config.php\";
+        sed -i '' 's#<<< DATABASE USER >>>#" . $db_username . "#g' \"" . $abs . "/wp-config.php\";
+        sed -i '' 's#<<< DATABASE PWD >>>#" . $db_password . "#g' \"" . $abs . "/wp-config.php\";
+        sed -i '' 's#<<< DATABASE HOST >>>#" . $db_host . "#g' \"" . $abs . "/wp-config.php\";
+        sed -i '' 's#<<< WP SITE URL >>>#" . $domain . "#g' \"" . $abs . "/wp-config.php\";
     ");
-
-    // Run the wp install
-    runLocally("
-        wp core install \
-        --url='" . $domain . "' \
-        --title='" . $wp_sitename . "' \
-        --admin_user='" . $wp_user . "' \
-        --admin_password='" . $wp_pwd . "' \
-        --admin_email='" . $wp_email . "'
-    ");
+    runLocally('wp core install --url="' . $domain . '" \
+        --title="' . $wp_sitename . '" \
+        --admin_user="' . $wp_user . '" \
+        --admin_password="' . $wp_pwd . '" \
+        --admin_email="' . $wp_email . '" \
+        --skip-email
+    ');
 
     // Shuffle the salts
     runLocally("wp config shuffle-salts");
@@ -129,35 +134,16 @@ task('setup-local-wp', function () {
     =========================================================================
     \e[0m
     ");
-})->local();
-after('setup-local-wp', 'composer-install-local');
+})->desc('Set up your project locally')->local();
 
-desc('Deploy your project');
-task('deploy', [
-    'deploy:info',
-    'deploy:lock',
-    'deploy:release',
-    'deploy:update_code',
-    'deploy:shared',
-    'deploy:writable',
-    'composer-install',
-    'deploy:clear_paths',
-    'deploy:symlink',
-    'deploy:unlock',
-    'cleanup',
-    'success'
-]);
-
-after('cleanup', 'signoff');
 task('signoff', function () {
     cd('{{deploy_path}}');
     run('touch revisions.log');
     run('echo "Branch ({{branch}}) deployed by ({{user}}) for release ({{release_name}})" > revisions.log');
-});
+})->setPrivate();
 
-desc('Reset the super admin password');
 task('reset-admin-pwd', function () {
-    $wp_pwd = bin2hex(openssl_random_pseudo_bytes(8));
+    $wp_pwd = bin2hex(openssl_random_pseudo_bytes(16));
     $wp_user = get('wp_user');
     $confirm = askConfirmation("
     Are you sure you wish to reset the password for '" . $wp_user . "'?",
@@ -165,9 +151,9 @@ task('reset-admin-pwd', function () {
     );
     if ($confirm !== true) {
         writeln("<error>
-========================================================================
-    You did not want to continue so your task was aborted
-========================================================================</error>
+    ========================================================================
+        You did not want to continue so your task was aborted
+    ========================================================================</error>
         ");
         exit;
     }
@@ -176,13 +162,12 @@ task('reset-admin-pwd', function () {
     run("wp user update " . $wp_user . " --skip-email --user_pass='" . $wp_pwd . "'");
     run("wp config shuffle-salts");
     writeln("<info>
-========================================================================
-    Your password has been set to '" . $wp_pwd . "'
-========================================================================</info>");
-});
+    ========================================================================
+        Your password has been set to '" . $wp_pwd . "'
+    ========================================================================</info>");
+})->desc('Reset the super admin password on the target environment');
 
-desc('Pull both WordPress uploads and a database from a given host');
 task('pull', [
     'pull-remote-db',
     'pull-remote-uploads'
-]);
+])->desc('Pull both WordPress uploads and a database from a given host');
