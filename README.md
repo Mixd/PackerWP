@@ -4,6 +4,8 @@ Built by [Mixd](https://github.com/Mixd/)
 
 ![Mixd logo](https://avatars1.githubusercontent.com/u/2025589?s=75 "Mixd - World Class Web Design")
 
+**Latest stable version: 1.0.0**
+
 PackerWP is a custom [Deployer](https://deployer.org/) runbook. It was designed as the successor to the legacy Rails deployment tool [WP Deploy](https://github.com/mixd/wp-deploy) and has been tailored to include all the Capistrano tasks that were previously provided by WP Deploy.
 
 ## Prerequisites
@@ -92,6 +94,15 @@ To upload your local WordPress upload folder to a remote host run:
 ```
 $ dep push-local-uploads [stage]
 ```
+
+## Deployment
+
+If you're ready to deploy your work to a remote host, simply run:
+```
+$ dep deploy [stage]
+```
+
+By default, PackerWP is configured to name every release using PHP's [date](https://www.php.net/manual/en/function.date.php) function in the following format `YmdHis`.
 
 ## Contributing
 
