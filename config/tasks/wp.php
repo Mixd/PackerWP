@@ -93,25 +93,25 @@ task('setup-local-wp', function () {
     $wp_pwd = bin2hex(openssl_random_pseudo_bytes(16));
     $abs = get('abspath');
 
-    if (testLocally("wp core is-installed") && file_exists($abs . '/wp-config.php')) {
+    if (test("wp core is-installed") && file_exists($abs . '/wp-config.php')) {
         writeln("<error>Existing wp-config.php detected at '" . $abs . "/wp-config.php'</error>");
         exit;
     }
 
     // Prep remote files
-    runLocally('cp "' . $abs . '/config/templates/local/wp-config.example.php" "' . $abs . '/wp-config.php"');
-    runLocally('cp "' . $abs . '/config/templates/local/.htaccess" "' . $abs . '/.htaccess"');
-    runLocally('cp "' . $abs . '/config/templates/local/robots.txt" "' . $abs . '/robots.txt"');
+    run('cp "' . $abs . '/config/templates/local/wp-config.example.php" "' . $abs . '/wp-config.php"');
+    run('cp "' . $abs . '/config/templates/local/.htaccess" "' . $abs . '/.htaccess"');
+    run('cp "' . $abs . '/config/templates/local/robots.txt" "' . $abs . '/robots.txt"');
 
     // Run a search-replace with the necessary values
-    runLocally("
+    run("
         sed -i '' 's#<<< DATABASE NAME >>>#" . $db_name . "#g' \"" . $abs . "/wp-config.php\";
         sed -i '' 's#<<< DATABASE USER >>>#" . $db_username . "#g' \"" . $abs . "/wp-config.php\";
         sed -i '' 's#<<< DATABASE PWD >>>#" . $db_password . "#g' \"" . $abs . "/wp-config.php\";
         sed -i '' 's#<<< DATABASE HOST >>>#" . $db_host . "#g' \"" . $abs . "/wp-config.php\";
         sed -i '' 's#<<< WP SITE URL >>>#" . $domain . "#g' \"" . $abs . "/wp-config.php\";
     ");
-    runLocally('wp core install --url="' . $domain . '" \
+    run('wp core install --url="' . $domain . '" \
         --title="' . $wp_sitename . '" \
         --admin_user="' . $wp_user . '" \
         --admin_password="' . $wp_pwd . '" \
@@ -120,7 +120,7 @@ task('setup-local-wp', function () {
     ');
 
     // Shuffle the salts
-    runLocally("wp config shuffle-salts");
+    run("wp config shuffle-salts");
 
     write("
     \e[32m
@@ -144,7 +144,8 @@ task('signoff', function () {
 
 task('reset-admin-pwd', function () {
     $wp_pwd = bin2hex(openssl_random_pseudo_bytes(16));
-    $wp_user = get('wp_user');
+    $wp_user = $_ENV["WP_USER"];
+    $stage = get('stage', 'local');
     $confirm = askConfirmation("
     Are you sure you wish to reset the password for '" . $wp_user . "'?",
         false
@@ -158,12 +159,22 @@ task('reset-admin-pwd', function () {
         exit;
     }
 
-    cd("{{release_path}}");
-    run("wp user update " . $wp_user . " --skip-email --user_pass='" . $wp_pwd . "'");
-    run("wp config shuffle-salts");
+    $update_cmd = '
+        wp user update "' . $wp_user . '" --skip-email --user_pass="' . $wp_pwd . '" && \
+        wp config shuffle-salts
+    ';
+    if ($stage == "local") {
+        runLocally($update_cmd);
+    } else {
+        cd("{{release_path}}");
+        run($update_cmd);
+    }
+
     writeln("<info>
     ========================================================================
-        Your password has been set to '" . $wp_pwd . "'
+        Your " . $stage . " administrator password has been set to:
+
+        <comment>" . $wp_pwd . "</comment>
     ========================================================================</info>");
 })->desc('Reset the super admin password on the target environment');
 

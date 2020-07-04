@@ -2,7 +2,7 @@
     "name": "mixd/packerwp",
     "description": "A deployment tool lovingly crafted by Mixd",
     "type": "library",
-    "version": "1.1.0",
+    "version": "1.0.0",
     "config": {
         "sort-packages": true
     },

@@ -64,6 +64,9 @@ foreach ($hosts as $env) {
     }
 }
 
+// Include reference to localhost
+localhost($_ENV["LOCAL_HOST"]);
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Below be dragons - tread carefully!
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,9 +80,6 @@ set('shared_files', [
     '.htaccess',
     'robots.txt'
 ]);
-
-// Default to 'staging' env
-set('default_stage', 'staging');
 
 // Allow interaction for Git clone
 set('git_tty', true);
