@@ -2,13 +2,34 @@
     "name": "mixd/packerwp",
     "description": "A deployment tool lovingly crafted by Mixd",
     "type": "library",
-    "version": "1.0.0",
+    "version": "1.1.0",
+    "config": {
+        "sort-packages": true
+    },
     "require": {
-        "vlucas/phpdotenv": "^5.0"
+        "php": ">=7.1",
+        "vlucas/phpdotenv": "^5.0",
+        "deployer/dist": "^6.8",
+        "composer/installers": "1.9.0",
+        "johnpbloch/wordpress": "^5.4.2"
     },
-    "suggest": {
-        "deployer/dist": "^6.8"
+    "scripts": {
+        "initialise": [
+            "cp ./vendor/deployer/dist/dep /usr/local/bin/dep; chmod +x /usr/local/bin/dep;"
+        ],
+        "post-install-cmd": [
+            "@initialise"
+        ],
+        "post-update-cmd": [
+            "@initialise"
+        ]
     },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://wpackagist.org"
+        }
+    ],
     "license": "GPL-3.0",
     "authors": [
         {
