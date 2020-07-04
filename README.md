@@ -1,6 +1,9 @@
 # PackerWP
 
-PackerWP is a deployment tool built using [Deployer](https://deployer.org/). It was designed as the successor to the legacy Rails deployment tool [WP Deploy](https://github.com/mixd/wp-deploy).
+Built by [Mixd](https://github.com/Mixd/)
+## ![Mixd logo](https://avatars1.githubusercontent.com/u/2025589?s=75 "Mixd - World Class Web Design")
+
+PackerWP is a custom [Deployer](https://deployer.org/) runbook. It was designed as the successor to the legacy Rails deployment tool [WP Deploy](https://github.com/mixd/wp-deploy) and has been tailored to include all the Capistrano tasks that were previously provided by WP Deploy.
 
 ## Setup
 
