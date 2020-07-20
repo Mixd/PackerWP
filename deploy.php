@@ -108,6 +108,9 @@ set('release_name', date('YmdHis'));
 // register the repo
 set('repository', $_ENV["REPOSITORY"]);
 
+// register the local wp url
+set('local_url',  $_ENV["WP_LOCALURL"]);
+
 // Try to use git cache where applicable
 set('git_cache', true);
 

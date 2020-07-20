@@ -86,7 +86,7 @@ task('setup-local-wp', function () {
     $db_name = $_ENV[strtoupper($stage) . "_DB_NAME"];
     $db_username = $_ENV[strtoupper($stage) . "_DB_USER"];
     $db_password = str_replace("#", "\#", $_ENV[strtoupper($stage) . "_DB_PASS"]);
-    $domain = $_ENV["WP_LOCALURL"];
+    $domain = get('local_url');
     $wp_user = $_ENV["WP_USER"];
     $wp_email = $_ENV["WP_EMAIL"];
     $wp_sitename = $_ENV["WP_SITENAME"];
