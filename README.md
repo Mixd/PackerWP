@@ -4,11 +4,31 @@ Built by [Mixd](https://github.com/Mixd/)
 
 ![Mixd logo](https://avatars1.githubusercontent.com/u/2025589?s=75 "Mixd - World Class Web Design")
 
-**Latest stable version: 1.0.0**
+**Latest stable version: 1.1.0**
 
 PackerWP is a custom [Deployer](https://deployer.org/) runbook. It was designed as the successor to the legacy Rails deployment tool [WP Deploy](https://github.com/mixd/wp-deploy) and has been tailored to include all the Capistrano tasks that were previously provided by WP Deploy.
 
-## Prerequisites
+## Available tasks
+
+| Task                   | Description                                                                             |
+|------------------------|-----------------------------------------------------------------------------------------|
+| backup-local-db        | Backup a copy of a local database and upload it to a remote host                        |
+| backup-remote-db       | Backup a copy of a remote database and download it                                      |
+| deploy                 | Deploy your project                                                                     |
+| rollback               | Rollback to previous release                                                            |
+| pull                   | Pull both WordPress uploads and a database from a given host                            |
+| pull-remote-db         | Pull down a copy of the database from the remote host and import it into your local env |
+| pull-remote-uploads    | Pull media from a remote host                                                           |
+| push-local-db          | Push up a local copy of a database and import it into the remote host                   |
+| push-local-uploads     | Push media to a remote host                                                             |
+| reset-admin-pwd        | Reset the super admin password on the target environment                                |
+| setup-local-wp         | Set up your project locally                                                             |
+| setup-wp               | Set up your project on the remote host                                                  |
+| ssh                    | Connect to host through ssh                                                             |
+| debug:task             | Display the task-tree for a given task                                                  |
+| deploy:unlock          | Unlock broken deployment                                                                |
+
+## Starting a new project
 
 To get started, create a new project with Composer. This command will download PackerWP, it's dependencies, and  WordPress into the `wordpress` directory.
 
@@ -34,7 +54,7 @@ The minimum required fields are:
 
 Now you are ready to set up your local WordPress environment.
 
-## Setting up
+### Setting up
 
 You can start by running
 
@@ -56,7 +76,7 @@ Finally, it will run the WordPress installation, reset the WordPress Salts and p
 >
 >Note: This task will also re-roll the WordPress salts.
 
-## Working with databases
+### Working with databases
 
 Occasionally you may wish to push or pull your MySQL Database to a specific environment.
 
@@ -83,7 +103,7 @@ $ dep backup-local-db
 ```
 each of these tasks will make a MySQL Backup using `wp db export` and gzip it into a `db_backups` folder in the project root.
 
-## Working with uploaded media
+### Working with uploaded media
 
 To download the WordPress upload folder from a remote host run:
 ```
@@ -95,7 +115,7 @@ To upload your local WordPress upload folder to a remote host run:
 $ dep push-local-uploads [stage]
 ```
 
-## Deployment
+### Deployment
 
 If you're ready to deploy your work to a remote host, simply run:
 ```
