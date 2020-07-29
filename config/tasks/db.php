@@ -26,7 +26,7 @@ task('backup-remote-db', function () {
     run('wp db export - | gzip > "' . $remote_db_path . $file . '"');
 
     runLocally('mkdir -p "' . $local_db_path . '"');
-    download($remote_db_path . $file, $local_db_path . $file);
+    download($remote_db_path . $file, $local_db_path . $file, ["options" => ["flags" => "-ch"]]);
 })->desc('Backup a copy of a remote database and download it');
 
 task('backup-local-db', function () {
@@ -67,7 +67,8 @@ task('db:import:remote', function () {
     $remote_db_path = get('folder');
     $local_db_path = get('abspath') . '/db_backups/';
     $file = get('file');
-    upload($local_db_path . $file, $remote_db_path . $file);
+    run('mkdir -p "' . $remote_db_path . '"');
+    upload($local_db_path . $file, $remote_db_path . $file, ["options" => ["flags" => "-ch"]]);
 
     cd("{{release_path}}");
     run("gzip -c -d " . $remote_db_path . $file . " | wp db import -");
