@@ -22,6 +22,7 @@ task('setup-wp', [
 ])->desc('Set up your project on the remote host');
 
 task('setup:wp:remote', function () {
+    cd('{{release_path}}');
     $stage = get('stage');
     $domain = $_ENV[strtoupper($stage) . "_STAGE_URL"];
     $db_host = $_ENV[strtoupper($stage) . "_DB_HOST"];
@@ -32,26 +33,23 @@ task('setup:wp:remote', function () {
     $wp_email = $_ENV["WP_EMAIL"];
     $wp_sitename = $_ENV["WP_SITENAME"];
     $wp_pwd = bin2hex(openssl_random_pseudo_bytes(16));
+    $path_to_wpconfig = "{{release_path}}/wp-config.php";
 
-    cd('{{release_path}}');
-
-    if (testLocally("wp core is-installed") && file_exists($abs . '/wp-config.php')) {
-        writeln("<error>Existing wp-config.php detected at '" . $abs . "/wp-config.php'</error>");
+    if (test("wp core is-installed")) {
+        writeln("<error>WordPress is already installed</error>");
         exit;
     }
 
-    run("cp ./config/templates/{{stage}}/wp-config.example.php ./wp-config.php");
-    run("cp ./config/templates/{{stage}}/.htaccess ./.htaccess");
-    run("cp ./config/templates/{{stage}}/robots.txt ./robots.txt");
+    run("cp {{release_path}}/config/templates/{{stage}}/wp-config.example.php " . $path_to_wpconfig);
+    run("cp {{release_path}}/config/templates/{{stage}}/.htaccess {{release_path}}/.htaccess");
+    run("cp {{release_path}}/config/templates/{{stage}}/robots.txt {{release_path}}/robots.txt");
 
     // Run a search-replace with the necessary values
-    run("
-        sed -i -- 's#<<< DATABASE NAME >>>#" . $db_name . "#g' ./wp-config.php;
-        sed -i -- 's#<<< DATABASE USER >>>#" . $db_username . "#g' ./wp-config.php;
-        sed -i -- 's#<<< DATABASE PWD >>>#" . $db_password . "#g' ./wp-config.php;
-        sed -i -- 's#<<< DATABASE HOST >>>#" . $db_host . "#g' ./wp-config.php;
-        sed -i -- 's#<<< WP SITE URL >>>#" . $domain . "#g' ./wp-config.php;
-    ");
+    searchreplaceinfile($path_to_wpconfig, "<<< DATABASE NAME >>>", $db_name);
+    searchreplaceinfile($path_to_wpconfig, "<<< DATABASE USER >>>", $db_username);
+    searchreplaceinfile($path_to_wpconfig, "<<< DATABASE PWD >>>", $db_password);
+    searchreplaceinfile($path_to_wpconfig, "<<< DATABASE HOST >>>", $db_host);
+    searchreplaceinfile($path_to_wpconfig, "<<< WP SITE URL >>>", $domain);
 
     run('wp core install --url="' . $domain . '" \
         --title="' . $wp_sitename . '" \
@@ -92,25 +90,25 @@ task('setup-local-wp', function () {
     $wp_sitename = $_ENV["WP_SITENAME"];
     $wp_pwd = bin2hex(openssl_random_pseudo_bytes(16));
     $abs = get('abspath');
+    $path_to_wpconfig = $abs . "/wp-config.php";
 
-    if (test("wp core is-installed") && file_exists($abs . '/wp-config.php')) {
-        writeln("<error>Existing wp-config.php detected at '" . $abs . "/wp-config.php'</error>");
+    if (test("wp core is-installed")) {
+        writeln("<error>WordPress is already installed</error>");
         exit;
     }
 
     // Prep remote files
-    run('cp "' . $abs . '/config/templates/local/wp-config.example.php" "' . $abs . '/wp-config.php"');
+    run('cp "' . $abs . '/config/templates/local/wp-config.example.php" "' . $path_to_wpconfig . '"');
     run('cp "' . $abs . '/config/templates/local/.htaccess" "' . $abs . '/.htaccess"');
     run('cp "' . $abs . '/config/templates/local/robots.txt" "' . $abs . '/robots.txt"');
 
     // Run a search-replace with the necessary values
-    run("
-        sed -i '' 's#<<< DATABASE NAME >>>#" . $db_name . "#g' \"" . $abs . "/wp-config.php\";
-        sed -i '' 's#<<< DATABASE USER >>>#" . $db_username . "#g' \"" . $abs . "/wp-config.php\";
-        sed -i '' 's#<<< DATABASE PWD >>>#" . $db_password . "#g' \"" . $abs . "/wp-config.php\";
-        sed -i '' 's#<<< DATABASE HOST >>>#" . $db_host . "#g' \"" . $abs . "/wp-config.php\";
-        sed -i '' 's#<<< WP SITE URL >>>#" . $domain . "#g' \"" . $abs . "/wp-config.php\";
-    ");
+    searchreplaceinfile($path_to_wpconfig, "<<< DATABASE NAME >>>", $db_name);
+    searchreplaceinfile($path_to_wpconfig, "<<< DATABASE USER >>>", $db_username);
+    searchreplaceinfile($path_to_wpconfig, "<<< DATABASE PWD >>>", $db_password);
+    searchreplaceinfile($path_to_wpconfig, "<<< DATABASE HOST >>>", $db_host);
+    searchreplaceinfile($path_to_wpconfig, "<<< WP SITE URL >>>", $domain);
+
     run('wp core install --url="' . $domain . '" \
         --title="' . $wp_sitename . '" \
         --admin_user="' . $wp_user . '" \
@@ -122,24 +120,23 @@ task('setup-local-wp', function () {
     // Shuffle the salts
     run("wp config shuffle-salts");
 
-    write("
-    \e[32m
-    =========================================================================
-    WordPress has successfully been installed. Here are your login details:
-
-    Username:       " . $wp_user . "
-    Password:       " . $wp_pwd . "
-    Email address:  " . $wp_email . "
-    Log in at:      " . $domain . "/wordpress/wp-admin
-    =========================================================================
-    \e[0m
-    ");
+    writeln("<info>");
+    writeln("=========================================================================");
+    writeln("WordPress has successfully been installed. Here are your login details:");
+    writeln("Username:       " . $wp_user);
+    writeln("Password:       " . $wp_pwd);
+    writeln("Email address:  " . $wp_email . "");
+    writeln("Log in at:      " . $domain . "/wordpress/wp-admin");
+    writeln("=========================================================================");
+    writeln("</info>");
 })->desc('Set up your project locally')->local();
 
 task('signoff', function () {
+    $signoff = "Branch ({{branch}}) deployed by ({{user}}) for release ({{release_name}})";
     cd('{{deploy_path}}');
     run('touch revisions.log');
-    run('echo "Branch ({{branch}}) deployed by ({{user}}) for release ({{release_name}})" > revisions.log');
+    run('echo "' . $signoff . '" >> revisions.log');
+    writeln("<info>" . $signoff . "</info>");
 })->setPrivate();
 
 task('reset-admin-pwd', function () {

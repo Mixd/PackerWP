@@ -26,6 +26,32 @@ if (!empty($autoload)) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Functions
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Searches $file for $before and replaces it with $after
+ *
+ * @param string $file
+ * @param string $before
+ * @param string $after
+ * @return bool
+ */
+function searchreplaceinfile(string $file, string $before, string $after)
+{
+    $seperator = "~";
+    $before = str_replace($seperator, "\\" . $seperator, $before);
+    $after = str_replace($seperator, "\\" . $seperator, $after);
+    $cmd = "sed -i '' 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
+    $stage = get('stage', 'local');
+    if ($stage == "local") {
+        return runLocally($cmd);
+    } else {
+        return run($cmd);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Environments
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -52,7 +78,7 @@ $hosts = [
 foreach ($hosts as $env) {
     $stage = strtolower($env);
     $host = null;
-    if ($_ENV[$env . "_HOST"]) {
+    if (isset($_ENV[$env . "_HOST"])) {
         $host = host($stage)
             ->hostname($_ENV[$env . "_HOST"])
             ->user($_ENV[$env . "_DEPLOY_USER"])
@@ -109,7 +135,7 @@ set('release_name', date('YmdHis'));
 set('repository', $_ENV["REPOSITORY"]);
 
 // register the local wp url
-set('local_url',  $_ENV["WP_LOCALURL"]);
+set('local_url', $_ENV["WP_LOCALURL"]);
 
 // Try to use git cache where applicable
 set('git_cache', true);
