@@ -1,12 +1,12 @@
 # PackerWP
 
-[![Latest Stable Version](https://poser.pugx.org/mixd/packerwp/v)](//packagist.org/packages/mixd/packerwp) [![License](https://poser.pugx.org/mixd/packerwp/license)](//packagist.org/packages/mixd/packerwp)
-
 Built by [Mixd](https://github.com/Mixd/)
 
 ![Mixd logo](https://avatars1.githubusercontent.com/u/2025589?s=75 "Mixd - World Class Web Design")
 
-PackerWP is a custom [Deployer](https://deployer.org/) runbook. It was designed as the successor to the legacy Rails deployment tool [WP Deploy](https://github.com/mixd/wp-deploy) and has been tailored to include all the Capistrano tasks that were previously provided by WP Deploy.
+PackerWP is a custom [Deployer](https://deployer.org/) runbook. It was designed as the successor to the legacy Rails
+deployment tool [WP Deploy](https://github.com/mixd/wp-deploy) and has been tailored to include all the Capistrano
+tasks that were previously provided by WP Deploy.
 
 ## Available tasks
 
@@ -28,17 +28,30 @@ PackerWP is a custom [Deployer](https://deployer.org/) runbook. It was designed 
 | debug:task             | Display the task-tree for a given task                                                  |
 | deploy:unlock          | Unlock broken deployment                                                                |
 
+This tool has been designed around Mixd's NHS Framework though should be portable enough to drop into any other
+WordPress-based project.
+
 ## Starting a new project
 
-To get started, create a new project with Composer. This command will download PackerWP, it's dependencies, and  WordPress into the `wordpress` directory.
+To get started, you'll need to download the latest release from Github and unzip it into the root of your project.
+
+Next, you'll want to install a few dependencies.
 
 ```
-$ composer create-project mixd/packerwp --stability=dev
+$ composer require vlucas/phpdotenv deployer/dist
+```
+
+With Deployer now installed, you can optionally move the deployment binary to your local system to make it easier
+to run commands.
+
+```
+$ cp "./vendor/deployer/dist/dep" "/usr/local/bin/dep"; chmod +x "/usr/local/bin/dep";
 ```
 
 Next, you will need to ensure you have created a MySQL database for your project.
 
-Inside the `config` folder you will see an `env` example file. Duplicate and rename it to `.env`. Now fill in your environment options.
+Inside the `config` folder you will see an `env` example file. Duplicate and rename it to `.env`.
+Now fill in your environment options.
 
 The minimum required fields are:
 
@@ -52,27 +65,39 @@ The minimum required fields are:
     'LOCAL_DB_USER'
     'LOCAL_DB_PASS'
 
-Now you are ready to set up your local WordPress environment.
+Now you are ready to set up your local WordPress environment. You should decide how you want to install WordPress
+before continuing.
+
+At Mixd we usually use Composer to manage WordPress and it's associated plugins. You can install WordPress into the
+`wordpress` subdirectory by running:
+
+```
+$ composer require composer/installers johnpbloch/wordpress
+```
 
 ### Setting up
 
-You can start by running
+Once you have your `.env` file set, you can install WordPress by running
 
 ```
 $ dep setup-local-wp
 ```
 
-This task will copy the `wp-config.example.php`, `.htaccess` and `robots.txt` from the `config/templates/local/` folder and place them in the project root.
+This task will copy the `wp-config.example.php`, `.htaccess` and `robots.txt` from the `config/templates/local/` folder
+and place them in the project root.
 
-It will then populate the `wp-config.php` file with the local environment variables that are defined in your `.env` file.
+It will then populate the `wp-config.php` file with the local environment variables that are defined in your `.env`
+file.
 
-Finally, it will run the WordPress installation, reset the WordPress Salts and present you with the new admin password and a link to the WordPress Admin.
+Finally, it will run the WordPress installation, reset the WordPress Salts and present you with the new admin password
+and a link to the WordPress Admin.
 
 >If you need to re-roll the admin password, you can reset it at anytime by running
 >
 >`$ dep reset-admin-pwd [stage]`
 >
-> if you omit `[stage]` you will reset the password for the local environment, otherwise you can supply `staging` or `production` appropriately.
+> if you omit `[stage]` you will reset the password for the local environment, otherwise you can supply `staging` or
+`production` appropriately.
 >
 >Note: This task will also re-roll the WordPress salts.
 
@@ -91,7 +116,8 @@ To upload your local database and import it into the remote host you can run:
 ```
 $ dep push-local-db [stage]
 ```
->Both the `pull` and `push` tasks will handle searching and replacing the necessary URLs to convert from `local` to `[stage]` or from `[stage]` to `local`.
+>Both the `pull` and `push` tasks will handle searching and replacing the necessary URLs to convert from `local` to
+`[stage]` or from `[stage]` to `local`.
 
 If you wish to simply make a backup without importing or replacements, you can run:
 ```
@@ -101,7 +127,8 @@ or
 ```
 $ dep backup-local-db
 ```
-each of these tasks will make a MySQL Backup using `wp db export` and gzip it into a `db_backups` folder in the project root.
+each of these tasks will make a MySQL Backup using `wp db export` and gzip it into a `db_backups` folder in the project
+root.
 
 ### Working with uploaded media
 
@@ -122,8 +149,10 @@ If you're ready to deploy your work to a remote host, simply run:
 $ dep deploy [stage]
 ```
 
-By default, PackerWP is configured to name every release using PHP's [date](https://www.php.net/manual/en/function.date.php) function in the following format `YmdHis`.
+By default, PackerWP is configured to name every release using PHP's
+[date](https://www.php.net/manual/en/function.date.php) function in the following format `YmdHis`.
 
 ## Contributing
 
-If you'd like to request changes or additional tasks we encourage you to create a Pull Request on the [Github repo](https://github.com/mixd/packerwp).
+If you'd like to request changes or additional tasks we encourage you to create a Pull Request on the
+[Github repo](https://github.com/mixd/packerwp).
