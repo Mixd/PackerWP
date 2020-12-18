@@ -14,20 +14,20 @@ task('deploy:heartbeat', function () {
     $stage = strtoupper(get('stage'));
     cd('{{deploy_path}}');
     $status_code = substr(run('{{bin/curl}} -I --silent ' . $_ENV[$stage . '_STAGE_URL'] . ' 2>&1 | grep "HTTP"'), -6);
-    if ($status_code !== "200 OK") {
+    if (strpos($status_code, '200') !== false) {
+        writeln("<info>Website responded with 200 OK. Safe to continue</info>");
+        return;
+    } else {
         writeln("<error>Website did not return a 200 OK. Deployment assumed to have failed</error>");
         $confirm = askConfirmation("
         Do you wish to initiate an immediate rollback?",
             false
         );
-        if ($confirm !== true) {
+        if ($confirm == true) {
             invoke('rollback');
             invoke('deploy:unlock');
             exit;
         }
-    } else {
-        writeln("<info>Website responded with 200 OK. Safe to continue</info>");
-        return;
     }
 })->setPrivate();
 

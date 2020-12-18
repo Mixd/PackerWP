@@ -2,6 +2,8 @@
 
 namespace Deployer;
 
+use Exception;
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Database related tasks
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -36,6 +38,117 @@ task('backup-local-db', function () {
     runLocally('wp db export - | gzip > "' . $local_db_path . $file . '"');
 })->desc('Backup a copy of a local database and upload it to a remote host');
 
+task('db:import:remote', function () {
+    $remote_db_path = get('folder');
+    $local_db_path = get('abspath') . '/db_backups/';
+    $file = get('file');
+    run('mkdir -p "' . $remote_db_path . '"');
+    upload($local_db_path . $file, $remote_db_path . $file, ["options" => ["flags" => "-ch"]]);
+
+    cd("{{release_path}}");
+    run("gzip -c -d " . $remote_db_path . $file . " | wp db import -");
+    invoke('db:rewrite:remote');
+    run("rm " . $remote_db_path . $file);
+})->setPrivate();
+
+task('db:import:local', function () {
+    $local_db_path = get('abspath') . '/db_backups/';
+    $file = get('file');
+    runLocally('gzip -c -d "' . $local_db_path . $file . '" | wp db import -');
+    invoke('db:rewrite:local');
+    runLocally("rm '" . $local_db_path . get('file') . "'");
+})->setPrivate();
+
+task('db:prepare', function () {
+    /**
+     * Include stage name in database backup filename
+     * https://github.com/Mixd/PackerWP/issues/7
+     */
+    $file = get('stage', 'local') . "_" . date('YmdHis') . ".sql.gz";
+    $folder = get('deploy_path') . '/db_backups/';
+    set('file', $file);
+    set('folder', $folder);
+})->setPrivate();
+
+task('db:reachable', function () {
+    $stage = get('stage', 'local');
+    $params = getenvbag($stage);
+
+    $db_host = $params["db-host"];
+    $db_name = $params["db-name"];
+    $db_user = $params["db-user"];
+    $db_pass = str_replace("#", "\#", $params["db-password"]);
+
+    $does_exist = run('mysql -h "' . $db_host . '" -u "' . $db_user . '" -p"' . $db_pass . '" --batch \
+        --skip-column-names -e "SHOW DATABASES LIKE \'' . $db_name . '\';" | grep "' . $db_name . '" > /dev/null;
+        echo "$?"');
+    if ($does_exist === "1") {
+        throw new Exception("Unable to locate database '{$db_name}' on '{$db_host}'");
+    } else {
+        writeln("<info>" . $db_name . "</info> found on host <info>" . $db_host . "</info>");
+    }
+})->setPrivate();
+
+task('db:rewrite:remote', function () {
+    $stage = get('stage');
+    $config = getconfig();
+    $from = get('local_url');
+    $to = get('stage_url');
+    writeln("<info>Processing URL replacements</info>");
+    writeln("<comment>$from ==> $to</comment>");
+    runLocally(
+        "wp search-replace --report-changed-only --all-tables $from $to",
+        [
+            'tty' => true,
+            'timeout' => null
+        ]
+    );
+    if ($config["is-multisite"] && !empty($config["rewrite"])) {
+        foreach ($config["rewrite"] as $ruleset) {
+            $from = $ruleset["local"];
+            $to = $ruleset[$stage];
+            writeln("<comment>$from ==> $to</comment>");
+            runLocally(
+                "wp search-replace --report-changed-only --all-tables $from $to",
+                [
+                    'tty' => true,
+                    'timeout' => null
+                ]
+            );
+        }
+    }
+})->setPrivate();
+
+task('db:rewrite:local', function () {
+    $stage = get('stage');
+    $config = getconfig();
+    $from = get('stage_url');
+    $to = get('local_url');
+    writeln("<info>Processing URL replacements</info>");
+    writeln("<comment>$from ==> $to</comment>");
+    runLocally(
+        "wp search-replace --report-changed-only --all-tables $from $to",
+        [
+            'tty' => true,
+            'timeout' => null
+        ]
+    );
+    if ($config["is-multisite"] && !empty($config["rewrite"])) {
+        foreach ($config["rewrite"] as $ruleset) {
+            $from = $ruleset[$stage];
+            $to = $ruleset["local"];
+            writeln("<comment>$from ==> $to</comment>");
+            runLocally(
+                "wp search-replace --report-changed-only --all-tables $from $to",
+                [
+                    'tty' => true,
+                    'timeout' => null
+                ]
+            );
+        }
+    }
+})->setPrivate();
+
 task('db:confirm', function () {
     $stage = get('stage');
     $db_name = $_ENV[strtoupper($stage) . "_DB_NAME"];
@@ -60,62 +173,6 @@ task('db:confirm', function () {
     ========================================================================</error>
         ");
         exit;
-    }
-})->setPrivate();
-
-task('db:import:remote', function () {
-    $remote_db_path = get('folder');
-    $local_db_path = get('abspath') . '/db_backups/';
-    $file = get('file');
-    run('mkdir -p "' . $remote_db_path . '"');
-    upload($local_db_path . $file, $remote_db_path . $file, ["options" => ["flags" => "-ch"]]);
-
-    cd("{{release_path}}");
-    run("gzip -c -d " . $remote_db_path . $file . " | wp db import -");
-    run("wp search-replace --report-changed-only --all-tables " . get('local_url') . " " . get('stage_url'), [
-        'tty' => true,
-        'timeout' => null
-    ]);
-    run("rm " . $remote_db_path . $file);
-})->setPrivate();
-
-task('db:import:local', function () {
-    $local_db_path = get('abspath') . '/db_backups/';
-    $file = get('file');
-    runLocally('gzip -c -d "' . $local_db_path . $file . '" | wp db import -');
-    runLocally("wp search-replace --report-changed-only --all-tables " . get('stage_url') . " " . get('local_url'), [
-        'tty' => true,
-        'timeout' => null
-    ]);
-    runLocally("rm '" . $local_db_path . get('file') . "'");
-})->setPrivate();
-
-task('db:prepare', function () {
-    $file = date('YmdHis') . ".sql.gz";
-    $folder = get('deploy_path') . '/db_backups/';
-    set('file', $file);
-    set('folder', $folder);
-})->setPrivate();
-
-task('db:reachable', function () {
-    $stage = strtoupper(get('stage', 'local'));
-    $db_host = $_ENV[$stage . "_DB_HOST"];
-    $db_user = $_ENV[$stage . "_DB_USER"];
-    $db_pass = $_ENV[$stage . "_DB_PASS"];
-    $db_name = $_ENV[$stage . "_DB_NAME"];
-    $does_exist = run('mysql -h "' . $db_host . '" -u "' . $db_user . '" -p"' . $db_pass . '" --batch \
-        --skip-column-names -e "SHOW DATABASES LIKE \'' . $db_name . '\';" | grep "' . $db_name . '" > /dev/null;
-        echo "$?"');
-    if ($does_exist === "1") {
-        writeln("");
-        writeln("<error>Unable to find database</error>");
-        writeln("<info>Host: </info>" . $db_host);
-        writeln("<info>Name: </info>" . $db_name);
-        writeln("<info>Stage: </info>" . get('stage', 'local'));
-        writeln("");
-        exit;
-    } else {
-        writeln("<info>" . $db_name . "</info> found on host <info>" . $db_host . "</info>");
     }
 })->setPrivate();
 

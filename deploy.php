@@ -2,14 +2,13 @@
 
 namespace Deployer;
 
-use Dotenv\Dotenv;
+use Exception;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Dependencies
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 require 'recipe/common.php';
-require realpath(__DIR__) . '/vendor/autoload.php';
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Tasks
@@ -39,10 +38,21 @@ if (!empty($autoload)) {
  */
 function searchreplaceinfile(string $file, string $before, string $after)
 {
-    $seperator = "~";
+    $seperator = "/";
     $before = str_replace($seperator, "\\" . $seperator, $before);
     $after = str_replace($seperator, "\\" . $seperator, $after);
-    $cmd = "sed -i '' 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
+
+    /**
+     * The syntax for 'sed' differs between OS X + Ubuntu
+     * https://github.com/Mixd/PackerWP/issues/10
+     */
+    $which_sed = run('sed --version | head -n 1');
+    if (strstr($which_sed, "GNU sed")) {
+        $cmd = "sed -i 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
+    } else {
+        $cmd = "sed -i '' 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
+    }
+
     $stage = get('stage', 'local');
     if ($stage == "local") {
         return runLocally($cmd);
@@ -51,47 +61,95 @@ function searchreplaceinfile(string $file, string $before, string $after)
     }
 }
 
+/**
+ * wp-cli's search-replace helper function
+ *
+ * @param string $from
+ * @param string $to
+ * @return void
+ */
+function searchreplace(string $from, string $to)
+{
+    writeln("Replacing all instances of '$from' with '$to'");
+    $cmd = "wp search-replace $from $to --all-tables --report-changed-only";
+    $stage = get('stage', 'local');
+    if ($stage == "local") {
+        return runLocally($cmd);
+    } else {
+        return run($cmd);
+    }
+}
+
+/**
+ * Get an array of environment vars
+ *
+ * @param string $stage
+ * @return array
+ */
+function getenvbag(string $stage)
+{
+    $config = get('config');
+    return $config["environments"][$stage];
+}
+
+/**
+ * Get an array of default configuration options
+ *
+ * @return array
+ */
+function getconfig()
+{
+    $config = get('config');
+    unset($config["environments"]);
+    return $config;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Environments
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $env_path = realpath(__DIR__) . "/config/";
-$dotenv = Dotenv::createImmutable($env_path, ".env");
-$dotenv->load();
-$dotenv->required([
-    'WP_USER',
-    'WP_EMAIL',
-    'WP_SITENAME',
-    'WP_LOCALURL',
-    'REPOSITORY',
-    'LOCAL_DB_HOST',
-    'LOCAL_DB_NAME',
-    'LOCAL_DB_USER',
-    'LOCAL_DB_PASS',
-])->notEmpty();
+if (file_exists($env_path . 'config.json') == false) {
+    throw new Exception("Unable to find configuration file at " . $env_path . 'config.json');
+} else {
+    $json = file_get_contents($env_path . 'config.json');
+    if ($json == false) {
+        throw new Exception("Unable to read configuration file. Check your current user has permission to read the file");
+    }
+    $json = json_decode($json, true, 12);
 
-$hosts = [
-    "STAGING",
-    "PRODUCTION"
-];
+    // register the repo
+    set('repository', $json["git-repo"]);
 
-foreach ($hosts as $env) {
-    $stage = strtolower($env);
-    $host = null;
-    if (isset($_ENV[$env . "_HOST"])) {
-        $host = host($stage)
-            ->hostname($_ENV[$env . "_HOST"])
-            ->user($_ENV[$env . "_DEPLOY_USER"])
-            ->stage($stage)
-            ->forwardAgent(true)
-            ->set('branch', $_ENV[$env . "_BRANCH"])
-            ->set('stage_url', $_ENV[$env . "_STAGE_URL"])
-            ->set('deploy_path', $_ENV[$env . "_DEPLOY_PATH"]);
+    // register the local wp url
+    set('local_url', $json["wp-local-url"]);
+
+    // register the config
+    set('config', $json);
+
+    foreach ($json["environments"] as $env => $params) {
+        $stage = strtolower($env);
+        $host = $params["host"];
+
+        if ($stage == "local") {
+            // Define localhost
+            localhost($params["host"]);
+            set('vars', $params);
+        } else {
+            // Register a new target host
+            host($stage)
+                ->hostname($host)
+                ->user($params["server-user"] ?? get_current_user())
+                ->stage($stage)
+                ->forwardAgent(true)
+                ->multiplexing(true)
+                ->set('branch', $params["git-branch"])
+                ->set('stage_url', $params["url"])
+                ->set('deploy_path', $params["server-path"])
+                ->set('extra', $params);
+        }
     }
 }
-
-// Include reference to localhost
-localhost($_ENV["LOCAL_HOST"]);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Below be dragons - tread carefully!
@@ -112,30 +170,39 @@ set('git_tty', true);
 
 // Define a directory that is shared between deployments
 set('shared_dirs', [
-    'content/uploads'
+    'content/uploads',
+    'content/cache',
+    'content/w3tc-config', // W3 Total Cache wants to write it's own config to disk
 ]);
 
 // Define web user writeable directories
 set('writable_dirs', [
     'content/uploads',
-    'content/cache'
+    'content/cache',
+    'content/w3tc-config' // W3 Total Cache wants to write it's own config to disk
 ]);
 
 // Use ACL to extend existing permissions
 set('writable_mode', 'acl'); // chmod, chown, chgrp or acl.
 
 // Set apache config options
-set('http_user', 'www-data');
-set('http_group', 'www-data');
+set('http_user', function () {
+   if ($webuser = run("cat /etc/apache2/envvars | grep 'APACHE_RUN_USER'")) {
+       $www = explode("=", $webuser);
+       return end($www);
+   }
+   return 'nobody';
+});
+set('http_group', function () {
+    if ($webgroup = run("cat /etc/apache2/envvars | grep 'APACHE_RUN_GROUP'")) {
+        $www = explode("=", $webgroup);
+        return end($www);
+    }
+    return 'nobody';
+});
 
 // Every release should be datetime stamped
 set('release_name', date('YmdHis'));
-
-// register the repo
-set('repository', $_ENV["REPOSITORY"]);
-
-// register the local wp url
-set('local_url', $_ENV["WP_LOCALURL"]);
 
 // Try to use git cache where applicable
 set('git_cache', true);
@@ -162,6 +229,32 @@ task('deploy', [
     'signoff',
     'success'
 ])->desc('Deploy your project');
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Eject button
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+task('reset', function () {
+    $abs = get('abspath');
+    write("<error>
+    ========================================================================
+        WARNING: You're about to reset your database and installation
+    ========================================================================</error>
+    ");
+
+    $confirm = askConfirmation("
+    Are you sure you wish to continue?",
+        false
+    );
+    if ($confirm == true) {
+        if (test("wp core is-installed") or test("wp core is-installed --network")) {
+            runLocally("wp db reset --yes", ['tty' => true]);
+        }
+        if (file_exists($abs . "/wp-config.php")) {
+            runLocally("rm -i '$abs/wp-config.php'", ['tty' => true]);
+        }
+    }
+})->desc("Reset the local WordPress database and installation");
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Hide uncommon tasks from the CLI
