@@ -7,11 +7,11 @@
 /**
  * Define some immutable paths
  */
-define('WP_HOME', '<<< WP SITE URL >>>');
-define('WP_SITEURL', '<<< WP SITE URL >>>/wordpress');
-define('WP_CONTENT_URL', '<<< WP SITE URL >>>/content');
+define('WP_HOME', '!!site_url!!');
+define('WP_SITEURL', '!!site_url!!/wordpress');
+define('WP_CONTENT_URL', '!!site_url!!/content');
 define('WP_CONTENT_DIR', str_replace('wordpress', '', realpath(dirname(__FILE__))) . 'content');
-define('WP_DEBUG', <<< WP DEBUG >>>);
+define('WP_DEBUG', '!!debug!!');
 
 /**
  * Handle reverse proxy, passing the IP to the server.

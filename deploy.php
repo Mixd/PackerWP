@@ -42,17 +42,7 @@ function searchreplaceinfile(string $file, string $before, string $after)
     $before = str_replace($seperator, "\\" . $seperator, $before);
     $after = str_replace($seperator, "\\" . $seperator, $after);
 
-    /**
-     * The syntax for 'sed' differs between OS X + Ubuntu
-     * https://github.com/Mixd/PackerWP/issues/10
-     */
-    $which_sed = run('sed --version | head -n 1');
-    if (strstr($which_sed, "GNU sed")) {
-        $cmd = "sed -i 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
-    } else {
-        $cmd = "sed -i '' 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
-    }
-
+    $cmd = "{{bin/sed}} 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
     $stage = get('stage', 'local');
     if ($stage == "local") {
         return runLocally($cmd);
@@ -60,6 +50,28 @@ function searchreplaceinfile(string $file, string $before, string $after)
         return run($cmd);
     }
 }
+
+/**
+ * Detect which version of sed is being used on the target
+ */
+set('bin/sed', function () {
+    $which_sed = run('sed --version | head -n 1');
+    if (strstr($which_sed, "GNU sed")) {
+        return "sed -i";
+    } else {
+        return "sed -i ''";
+    }
+});
+
+/**
+ * Detect which version of sed is being used on the target
+ */
+set('bin/wp', function () {
+    if (!commandExist('wp')) {
+        throw new Exception("wp-cli was not detected in your \$PATH");
+    }
+    return run('which wp');
+});
 
 /**
  * wp-cli's search-replace helper function
