@@ -1,0 +1,51 @@
+{
+    "name": "Project Name",
+    "description": "PackerWP WordPress",
+    "wp-user": "me",
+    "wp-email": "me@example.com",
+    "wp-sitename": "My new WordPress site",
+    "wp-local-url": "http://example.dev",
+    "git-repo": "git@github.com:Me/MySite.git",
+    "is-multisite": false,
+    "rewrite": [
+        {
+            "local": "http://a.example.dev",
+            "staging": "https://a.example.co.uk",
+            "production": "https://a.example.com"
+        }
+    ],
+    "environments": {
+        "local": {
+            "wp-debug": true,
+            "host": "localhost",
+            "db-host": "localhost",
+            "db-name": "wp_example",
+            "db-user": "root",
+            "db-password": "root"
+        },
+        "staging": {
+            "wp-debug": true,
+            "url": "https://dev.example.co.uk",
+            "host": "myhost-dev01.example.com",
+            "db-host": "xxxxxx",
+            "db-name": "xxxxxx",
+            "db-user": "xxxxxx",
+            "db-password": "xxxxxx",
+            "git-branch": "development",
+            "server-path": "/var/www",
+            "server-user": "deploy_user"
+        },
+        "production": {
+            "wp-debug": false,
+            "url": "https://www.example.co.uk",
+            "host": "myhost-prod01.example.com",
+            "db-host": "xxxxxx",
+            "db-name": "xxxxxx",
+            "db-user": "xxxxxx",
+            "db-password": "xxxxxx",
+            "git-branch": "main",
+            "server-path": "/var/www",
+            "server-user": "deploy_user"
+        }
+    }
+}
