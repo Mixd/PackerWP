@@ -25,7 +25,7 @@ if (!empty($autoload)) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Functions
+//// Misc. Helper Functions
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -43,47 +43,6 @@ function searchreplaceinfile(string $file, string $before, string $after)
     $after = str_replace($seperator, "\\" . $seperator, $after);
 
     $cmd = "{{bin/sed}} 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
-    $stage = get('stage', 'local');
-    if ($stage == "local") {
-        return runLocally($cmd);
-    } else {
-        return run($cmd);
-    }
-}
-
-/**
- * Detect which version of sed is being used on the target
- */
-set('bin/sed', function () {
-    $which_sed = run('sed --version | head -n 1');
-    if (strstr($which_sed, "GNU sed")) {
-        return "sed -i";
-    } else {
-        return "sed -i ''";
-    }
-});
-
-/**
- * Detect which version of sed is being used on the target
- */
-set('bin/wp', function () {
-    if (!commandExist('wp')) {
-        throw new Exception("wp-cli was not detected in your \$PATH");
-    }
-    return run('which wp');
-});
-
-/**
- * wp-cli's search-replace helper function
- *
- * @param string $from
- * @param string $to
- * @return void
- */
-function searchreplace(string $from, string $to)
-{
-    writeln("Replacing all instances of '$from' with '$to'");
-    $cmd = "wp search-replace $from $to --all-tables --report-changed-only";
     $stage = get('stage', 'local');
     if ($stage == "local") {
         return runLocally($cmd);
@@ -126,7 +85,7 @@ if (file_exists($env_path . 'config.json') == false) {
 } else {
     $json = file_get_contents($env_path . 'config.json');
     if ($json == false) {
-        throw new Exception("Unable to read configuration file. Check your current user has permission to read the file");
+        throw new Exception("Unable to read " . $env_path . "config.json. Check your current user has permission to read the file");
     }
     $json = json_decode($json, true, 12);
 
@@ -213,6 +172,36 @@ set('http_group', function () {
     return 'nobody';
 });
 
+// Detect which version of sed is being used on the target
+set('bin/sed', function () {
+    if (!commandExist('sed')) {
+        throw new Exception("sed was not detected in your \$PATH");
+    }
+    $sed = run("command -v 'sed' || which 'sed' || type -p 'sed'");
+    $which_sed = run($sed . ' --version | head -n 1');
+    if (strstr($which_sed, "GNU sed")) {
+        return "$sed -i";
+    } else {
+        return "$sed -i ''";
+    }
+});
+
+// Detect which version of curl is being used
+set('bin/curl', function () {
+    if (!commandExist('curl')) {
+        throw new Exception("curl was not detected in your \$PATH");
+    }
+    return run("command -v 'curl' || which 'curl' || type -p 'curl'");
+});
+
+// Detect which version of sed is being used on the target
+set('bin/wp', function () {
+    if (!commandExist('wp')) {
+        throw new Exception("wp-cli was not detected in your \$PATH");
+    }
+    return run("command -v 'wp' || which 'wp' || type -p 'wp'");
+});
+
 // Every release should be datetime stamped
 set('release_name', date('YmdHis'));
 
@@ -242,12 +231,33 @@ task('deploy', [
     'success'
 ])->desc('Deploy your project');
 
+/**
+ * Log the deployment info into a revisions file in the deployment path
+ */
+task('signoff', function () {
+    $signoff = "Branch ({{branch}}) deployed by ({{user}}) for release ({{release_name}})";
+    cd('{{deploy_path}}');
+    run('touch revisions.log');
+    run('echo "' . $signoff . '" >> revisions.log');
+    writeln("<info>" . $signoff . "</info>");
+})->setPrivate();
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Eject button
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 task('reset', function () {
-    $abs = get('abspath');
+    $config = getconfig();
+    $stage = get('stage', 'local');
+    $params = getenvbag($stage);
+    if ($stage == 'local') {
+        $domain = $config["wp-local-url"];
+    } else {
+        $domain = $params["url"];
+    }
+
+    $abs = $stage == 'local' ? get('abspath') : get('release_path');
+
     write("<error>
     ========================================================================
         WARNING: You're about to reset your database and installation
@@ -255,18 +265,37 @@ task('reset', function () {
     ");
 
     $confirm = askConfirmation("
-    Are you sure you wish to continue?",
+    Are you sure you wish to reset $domain?",
         false
     );
     if ($confirm == true) {
-        if (test("wp core is-installed") or test("wp core is-installed --network")) {
-            runLocally("wp db reset --yes", ['tty' => true]);
+        // Reset database
+        $cmd = "{{bin/wp}} db reset --yes";
+        if ($stage == 'local') {
+            if (test("{{bin/wp}} core is-installed") or test("{{bin/wp}} core is-installed --network")) {
+                runLocally($cmd, ['tty' => true]);
+            }
+        } else {
+            within('{{release_path}}', function () use ($cmd) {
+                run($cmd, ['tty' => true]);
+            });
         }
-        if (file_exists($abs . "/wp-config.php")) {
-            runLocally("rm -i '$abs/wp-config.php'", ['tty' => true]);
+
+        // Remove wp-config.php (optional)
+        $cmd = "rm -i '$abs/wp-config.php'";
+        if ($stage == 'local') {
+            if (file_exists($abs . "/wp-config.php")) {
+                runLocally($cmd, ['tty' => true]);
+            }
+        } else {
+            within('{{release_path}}', function () use ($cmd, $abs) {
+                if (file_exists("wp-config.php")) {
+                    run($cmd, ['tty' => true]);
+                }
+            });
         }
     }
-})->desc("Reset the local WordPress database and installation");
+})->desc("Reset the WordPress database and installation");
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Hide uncommon tasks from the CLI

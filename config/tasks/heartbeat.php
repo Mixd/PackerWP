@@ -6,14 +6,12 @@ namespace Deployer;
 //// Heartbeat invokes a rollback if the site doesnt respond with a 200 OK post-deploy
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-set('bin/curl', function () {
-    return run('which curl');
-});
-
 task('deploy:heartbeat', function () {
-    $stage = strtoupper(get('stage'));
-    cd('{{deploy_path}}');
-    $status_code = substr(run('{{bin/curl}} -I --silent ' . $_ENV[$stage . '_STAGE_URL'] . ' 2>&1 | grep "HTTP"'), -6);
+    $stage = get('stage', 'local');
+    $params = getenvbag($stage);
+    $domain = $params["url"];
+
+    $status_code = substr(run('{{bin/curl}} -I --silent ' . $domain . ' 2>&1 | grep "HTTP"'), -6);
     if (strpos($status_code, '200') !== false) {
         writeln("<info>Website responded with 200 OK. Safe to continue</info>");
         return;

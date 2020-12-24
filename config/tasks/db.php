@@ -36,7 +36,7 @@ task('backup-local-db', function () {
     $file = get('file');
     runLocally('mkdir -p "' . $local_db_path . '"');
     runLocally('wp db export - | gzip > "' . $local_db_path . $file . '"');
-})->desc('Backup a copy of a local database and upload it to a remote host');
+})->desc('Backup a copy of a local database');
 
 task('db:import:remote', function () {
     $remote_db_path = get('folder');
@@ -60,12 +60,18 @@ task('db:import:local', function () {
 })->setPrivate();
 
 task('db:prepare', function () {
+    $stage = get('stage', 'local');
     /**
      * Include stage name in database backup filename
      * https://github.com/Mixd/PackerWP/issues/7
      */
-    $file = get('stage', 'local') . "_" . date('YmdHis') . ".sql.gz";
-    $folder = get('deploy_path') . '/db_backups/';
+    $file = $stage . "_" . date('YmdHis') . ".sql.gz";
+    if ($stage == "local") {
+        $root_path = get('abspath');
+    } else {
+        $root_path = get('deploy_path');
+    }
+    $folder = $root_path . '/db_backups/';
     set('file', $file);
     set('folder', $folder);
 })->setPrivate();
@@ -151,7 +157,8 @@ task('db:rewrite:local', function () {
 
 task('db:confirm', function () {
     $stage = get('stage');
-    $db_name = $_ENV[strtoupper($stage) . "_DB_NAME"];
+    $params = getenvbag($stage);
+    $db_name = $params["db-name"];
 
     write("<error>
     ========================================================================
