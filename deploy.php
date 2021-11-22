@@ -79,7 +79,7 @@ function getconfig()
 //// Environments
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$env_path = realpath(__DIR__) . "/config/";
+$env_path = realpath(getcwd()) . '/';
 if (file_exists($env_path . 'config.json') == false) {
     throw new Exception("Unable to find configuration file at " . $env_path . 'config.json');
 } else {
