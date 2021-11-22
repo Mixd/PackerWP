@@ -1,7 +1,6 @@
 {
     "name": "mixd/packerwp",
     "description": "Deploy a traditional WordPress installation on a target environment using Deployer",
-    "version": "1.2.0-alpha",
     "homepage": "https://github.com/Mixd/PackerWP/",
     "authors": [
         {
