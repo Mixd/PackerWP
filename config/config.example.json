@@ -1,6 +1,4 @@
 {
-    "name": "Project Name",
-    "description": "PackerWP WordPress",
     "wp-user": "me",
     "wp-email": "me@example.com",
     "wp-sitename": "My new WordPress site",

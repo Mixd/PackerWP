@@ -1,9 +1,9 @@
 {
     "name": "mixd/packerwp",
     "description": "Deploy a traditional WordPress installation on a target environment using Deployer",
+    "version": "2.0.0",
     "require": {
         "php": ">=7.3",
-        "deployer/dist": "^6.8",
-        "composer/installers": "^1.12"
+        "deployer/dist": "^7.0.0-rc.3"
     }
 }

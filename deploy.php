@@ -89,6 +89,9 @@ if (file_exists($env_path . 'config.json') == false) {
     }
     $json = json_decode($json, true, 12);
 
+    // Set the name
+    set('application', $json["wp-sitename"]);
+
     // register the repo
     set('repository', $json["git-repo"]);
 
