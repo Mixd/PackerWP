@@ -19,6 +19,6 @@
     "license": "GPL-3.0-or-later",
     "require": {
         "php": ">=7.3",
-        "deployer/dist": "^7.0.0-rc.3"
+        "deployer/dist": "^6.8"
     }
 }
