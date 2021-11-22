@@ -2,6 +2,22 @@
     "name": "mixd/packerwp",
     "description": "Deploy a traditional WordPress installation on a target environment using Deployer",
     "version": "1.2.0-alpha",
+    "homepage": "https://github.com/Mixd/PackerWP/",
+    "authors": [
+        {
+            "name": "Mixd",
+            "email": "info@mixd.co.uk",
+            "homepage": "https://www.mixd.co.uk",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/Mixd/PackerWP/issues"
+    },
+    "suggest": {
+        "johnpbloch/wordpress": "Allows you to install WordPress using Composer"
+    },
+    "license": "GPL-3.0-or-later",
     "require": {
         "php": ">=7.3",
         "deployer/dist": "^7.0.0-rc.3"
