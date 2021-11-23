@@ -314,7 +314,7 @@ function wp_config_create(
     searchreplaceinfile(
         $path_to_generated_wpconfig,
         '!!debug!!',
-        $params['wp-debug'] ?? 'false'
+        $params['wp_debug'] ?? 'false'
     );
 
     return $result;
