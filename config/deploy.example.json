@@ -1,0 +1,44 @@
+{
+    "git_repo": "git@github.com:Mixd/XXX.git",
+    "wordpress": {
+        "wp_user": "my_admin_user",
+        "wp_email": "my_admin_user@domain.com",
+        "wp_sitename": "My cool site",
+        "wp_home_url": "http://my-cool-site.test",
+        "is_multisite": false,
+        "rewrite": []
+    },
+    "environments": {
+        "local": {
+            "wp_debug": true,
+            "db_host": "localhost",
+            "db_name": "",
+            "db_user": "",
+            "db_password": ""
+        },
+        "staging": {
+            "wp_debug": true,
+            "wp_home_url": "https://staging.domain.co.uk",
+            "branch": "development",
+            "db_host": "",
+            "db_name": "",
+            "db_user": "",
+            "db_password": "",
+            "hostname": "stg01.mixd.co.uk",
+            "deploy_path": "/var/www/html",
+            "deploy_user": "my_deploy_user"
+        },
+        "production": {
+            "wp_debug": true,
+            "wp_home_url": "https://www.domain.co.uk",
+            "branch": "main",
+            "db_host": "",
+            "db_name": "",
+            "db_user": "",
+            "db_password": "",
+            "hostname": "prod01.example.com",
+            "deploy_path": "/var/www/html",
+            "deploy_user": "my_deploy_user"
+        }
+    }
+}
