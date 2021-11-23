@@ -258,7 +258,6 @@ task('deploy', [
     'deploy:update_code',
     'deploy:shared',
     'deploy:writable',
-    'composer-install',
     'deploy:clear_paths',
     'deploy:symlink',
     'deploy:unlock',
