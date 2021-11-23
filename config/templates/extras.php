@@ -10,8 +10,12 @@
 define('WP_HOME', '!!site_url!!');
 define('WP_SITEURL', '!!site_url!!/wordpress');
 define('WP_CONTENT_URL', '!!site_url!!/content');
-define('WP_CONTENT_DIR', str_replace('wordpress', '', realpath(dirname(__FILE__))) . 'content');
-define('WP_DEBUG', '!!debug!!');
+define(
+    'WP_CONTENT_DIR',
+    str_replace('wordpress', '', realpath($_SERVER['DOCUMENT_ROOT'])) .
+        '/content'
+);
+define('WP_DEBUG', !!debug!!);
 
 /**
  * Handle reverse proxy, passing the IP to the server.
@@ -46,15 +50,6 @@ define('DISALLOW_FILE_MODS', true);
  * @see https://github.com/felixarntz/multisite-fixes/blob/master/mu-plugins/wpms-site-url-fixer.php
  */
 define('WP_CORE_DIRECTORY', 'wordpress');
-
-/**
- * A series of pathing fixes for WordPress
- */
-define('COOKIE_DOMAIN', "");
-define('COOKIEPATH', preg_replace('|https?://[^/]+|i', '', WP_HOME . '/'));
-define('SITECOOKIEPATH', preg_replace('|https?://[^/]+|i', '', WP_SITEURL . '/'));
-define('ADMIN_COOKIE_PATH', SITECOOKIEPATH . 'wp-admin');
-define('PLUGINS_COOKIE_PATH', preg_replace('|https?://[^/]+|i', '', WP_CONTENT_URL . '/plugins/'));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// END custom wp-config values

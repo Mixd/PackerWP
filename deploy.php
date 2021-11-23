@@ -280,66 +280,6 @@ task('signoff', function () {
 })->setPrivate();
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Eject button
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-task('reset', function () {
-    $wp_config = getconfig();
-    $stage = get('stage', 'local');
-    $env_config = getenvbag($stage);
-    if ($stage == 'local') {
-        $domain = $wp_config['wp_home_url'];
-    } else {
-        $domain = $env_config['wp_home_url'];
-    }
-
-    $abs = $stage == 'local' ? get('abspath') : get('release_path');
-
-    write("<error>
-    ========================================================================
-        WARNING: You're about to reset your database and installation
-    ========================================================================</error>
-    ");
-
-    $confirm = askConfirmation(
-        "
-    Are you sure you wish to reset $domain?",
-        false
-    );
-    if ($confirm == true) {
-        // Reset database
-        $cmd = '{{bin/wp}} db reset --yes';
-        if ($stage == 'local') {
-            if (
-                test('{{bin/wp}} core is-installed') or
-                test('{{bin/wp}} core is-installed --network')
-            ) {
-                runLocally($cmd, ['tty' => true]);
-            }
-        } else {
-            within('{{release_path}}', function () use ($cmd) {
-                run($cmd, ['tty' => true]);
-            });
-        }
-
-        // Remove wp-config.php (optional)
-        $path_to_wpconfig = $abs . 'wp-config.php';
-        $cmd = "rm -i '$path_to_wpconfig'";
-        if ($stage == 'local') {
-            if (file_exists($path_to_wpconfig)) {
-                runLocally($cmd, ['tty' => true]);
-            }
-        } else {
-            within('{{release_path}}', function () use ($cmd, $abs) {
-                if (file_exists('wp-config.php')) {
-                    run($cmd, ['tty' => true]);
-                }
-            });
-        }
-    }
-})->desc('Reset the WordPress database and installation');
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Hide uncommon tasks from the CLI
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

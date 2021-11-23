@@ -69,7 +69,7 @@ task('setup:wp:remote', function () {
             $domain,
             $params['db_name'],
             $params['db_user'],
-            str_replace('#', '\#', $params['db_password']),
+            $params['db_password'],
             $params['db_host']
         );
 
@@ -120,7 +120,7 @@ task('setup-local-wp', function () {
         $domain,
         $env_config['db_name'],
         $env_config['db_user'],
-        str_replace('#', '\#', $env_config['db_password']),
+        $env_config['db_password'],
         $env_config['db_host']
     );
 
@@ -148,7 +148,7 @@ task('setup-local-wp', function () {
  */
 task('reset-admin-pwd', function () {
     $config = getconfig();
-    $wp_user = $config['wp-user'];
+    $wp_user = $config['wp_user'];
 
     $wp_pwd = wp_password_create();
     $stage = get('stage', 'local');
@@ -194,6 +194,71 @@ task('pull', ['pull-remote-db', 'pull-remote-uploads'])->desc(
     'Pull both WordPress uploads and a database from a given host'
 );
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Eject button
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+task('reset', function () {
+    $wp_config = getconfig();
+    $stage = get('stage', 'local');
+    $env_config = getenvbag($stage);
+
+    if ($stage == 'local') {
+        $domain = $wp_config['wp_home_url'];
+    } else {
+        $domain = $env_config['wp_home_url'];
+    }
+
+    if (get('stage') == 'local') {
+        $abs = get('abspath');
+    } else {
+        $abs = get('release_path') . '/';
+    }
+
+    write("<error>
+    ========================================================================
+        WARNING: You're about to reset your database and installation
+    ========================================================================</error>
+    ");
+
+    $confirm = askConfirmation(
+        "
+    Are you sure you wish to reset $domain?",
+        false
+    );
+    if ($confirm == true) {
+        // Reset database
+        $cmd = '{{bin/wp}} db reset --yes';
+        if ($stage == 'local') {
+            if (
+                test('{{bin/wp}} core is-installed') or
+                test('{{bin/wp}} core is-installed --network')
+            ) {
+                runLocally($cmd, ['tty' => true]);
+            }
+        } else {
+            within('{{release_path}}', function () use ($cmd) {
+                run($cmd, ['tty' => true]);
+            });
+        }
+
+        // Remove wp-config.php (optional)
+        $path_to_wpconfig = $abs . 'wp-config.php';
+        $cmd = "rm -i '$path_to_wpconfig'";
+        if ($stage == 'local') {
+            if (file_exists($path_to_wpconfig)) {
+                runLocally($cmd, ['tty' => true]);
+            }
+        } else {
+            within('{{release_path}}', function () use ($cmd, $abs) {
+                if (file_exists('wp-config.php')) {
+                    run($cmd, ['tty' => true]);
+                }
+            });
+        }
+    }
+})->desc('Reset the WordPress database and installation');
+
 /**
  * Create a wp-config.php file in the root of the site
  *
@@ -213,8 +278,13 @@ function wp_config_create(
     string $db_host,
     string $locale = 'en_GB'
 ) {
-    $project_root = get('abspath');
-    $config_root = realpath(dirname(__DIR__));
+    if (get('stage') == 'local') {
+        $project_root = get('abspath');
+        $config_root = realpath(dirname(__DIR__));
+    } else {
+        $project_root = get('release_path') . '/';
+        $config_root = $project_root . 'vendor/mixd/packerwp/config';
+    }
 
     writeln('');
     writeln('<comment>Creating wp-config.php...</comment>');
@@ -223,11 +293,11 @@ function wp_config_create(
 
     // Create the wp-config.php file
     $extras = $config_root . '/templates/extras.php';
-    $cmd = "{{bin/wp}} config create --dbname=$db_name \
-        --dbuser=$db_username \
-        --dbpass=$db_password \
-        --dbhost=$db_host \
-        --locale=$locale \
+    $cmd = "{{bin/wp}} config create --dbname=\"$db_name\" \
+        --dbuser=\"$db_username\" \
+        --dbpass=\"$db_password\" \
+        --dbhost=\"$db_host\" \
+        --locale=\"$locale\" \
         --force";
 
     if (file_exists($extras)) {
@@ -273,23 +343,13 @@ function wp_core_install(
     if ($is_multisite) {
         writeln('<comment>Installing WordPress Multisite</comment>');
         $result = run(
-            '{{bin/wp}} core multisite-install --url="' .
-                $domain .
-                '" \
-            --title="' .
-                $wp_sitename .
-                '" \
-            --admin_user="' .
-                $wp_user .
-                '" \
-            --admin_password="' .
-                $wp_pwd .
-                '" \
-            --admin_email="' .
-                $wp_email .
-                '" \
+            "{{bin/wp}} core multisite-install --url=\"$domain\" \
+            --title=\"$wp_sitename\" \
+            --admin_user=\"$wp_user\" \
+            --admin_password=\"$wp_pwd\" \
+            --admin_email=\"$wp_email\" \
             --skip-email \
-            --subdomains',
+            --subdomains",
             ['tty' => true]
         );
         // Write notice about multisite
@@ -301,23 +361,12 @@ function wp_core_install(
     } else {
         writeln('<comment>Installing WordPress</comment>');
         $result = run(
-            '{{bin/wp}} core install --url="' .
-                $domain .
-                '" \
-            --title="' .
-                $wp_sitename .
-                '" \
-            --admin_user="' .
-                $wp_user .
-                '" \
-            --admin_password="' .
-                $wp_pwd .
-                '" \
-            --admin_email="' .
-                $wp_email .
-                '" \
-            --skip-email
-        ',
+            "{{bin/wp}} core install --url=\"$domain\" \
+            --title=\"$wp_sitename\" \
+            --admin_user=\"$wp_user\" \
+            --admin_password=\"$wp_pwd\" \
+            --admin_email=\"$wp_email\" \
+            --skip-email",
             ['tty' => true]
         );
     }
@@ -335,7 +384,12 @@ function wp_core_install(
  */
 function wp_after_install(string $domain)
 {
-    $project_root = get('abspath');
+    if (get('stage') == 'local') {
+        $project_root = get('abspath');
+    } else {
+        $project_root = get('release_path') . '/';
+    }
+
     run("{{bin/wp}} option update home $domain");
     run("{{bin/wp}} option update siteurl $domain/wordpress");
 
