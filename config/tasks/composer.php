@@ -14,7 +14,10 @@ task('composer:install', function () {
                 'To speed up composer installation setup "unzip" command with PHP zip extension.'
             );
         }
-        if (has('previous_release')) {
+        if (
+            has('previous_release') &&
+            test('[ -d {{previous_release}}/vendor ]')
+        ) {
             run('cp -R {{previous_release}}/vendor {{release_path}}/vendor');
         }
         run('cd {{release_path}} && {{bin/composer}} {{composer_options}}', [
@@ -23,4 +26,4 @@ task('composer:install', function () {
     }
 })->setPrivate();
 
-after('deploy:writable', 'composer:install');
+after('deploy:update_code', 'composer:install');

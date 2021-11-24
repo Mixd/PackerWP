@@ -11,10 +11,10 @@ task('deploy:heartbeat', function () {
     $params = getenvbag($stage);
     $domain = $params['wp_home_url'];
 
-    $status_code = substr(
-        run('{{bin/curl}} -I --silent ' . $domain . ' 2>&1 | grep "HTTP"'),
-        -6
+    $response = run(
+        '{{bin/curl}} -I --silent ' . $domain . ' 2>&1 | grep "HTTP"'
     );
+    $status_code = substr($response, -6);
 
     $is_200_ok = strpos($status_code, '200') !== false;
     $is_3XX_redirect =
@@ -22,15 +22,27 @@ task('deploy:heartbeat', function () {
         strpos($status_code, '302') !== false;
 
     if ($is_200_ok) {
-        writeln('<info>Website responded with 200 OK. Safe to continue</info>');
+        write("<info>
+    ========================================================================
+        $domain responded with $response
+    ========================================================================</info>
+");
         $confirm = false;
     } elseif ($is_3XX_redirect) {
-        writeln(
-            "<comment>Website returned a 300 status code. Is the 'wp_home_url' correct?</comment>"
-        );
+        write("<comment>
+    ========================================================================
+        WARNING: 'wp_home_url' for '$stage' may not be exactly right!
+        $domain responded with $response
+    ========================================================================</comment>
+");
         $confirm = askConfirmation('Do you want to rollback?', false);
     } else {
-        writeln('<error>Website returned an invalid status code.</error>');
+        write("<error>
+    ========================================================================
+        ERROR: Website is not responding after a deployment
+        $domain responded with $response
+    ========================================================================</error>
+");
         $confirm = askConfirmation('Do you want to rollback?', false);
     }
 

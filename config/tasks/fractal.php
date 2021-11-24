@@ -26,7 +26,10 @@ task('fractal:detect', function () {
 
 task('fractal:build', function () {
     writeln('<info>Installing fractal binary</info>');
-    if (has('previous_release')) {
+    if (
+        has('previous_release') &&
+        test('[ -d {{previous_release}}/node_modules ]')
+    ) {
         run(
             'cp -R {{previous_release}}/node_modules {{release_path}}/node_modules'
         );

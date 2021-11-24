@@ -178,7 +178,7 @@ set('writable_dirs', [
 ]);
 
 // Use ACL to extend existing permissions
-set('writable_mode', 'chmod'); // chmod, chown, chgrp or acl.
+set('writable_mode', 'chgrp'); // chmod, chown, chgrp or acl.
 set('writable_chmod_mode', '775');
 
 // Default to using git clone --recursive
@@ -247,6 +247,9 @@ set('git_cache', true);
 // Disable usage data
 set('allow_anonymous_stats', false);
 
+// Ensure permissions are set recursively
+set('writable_recursive', true);
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Master runbook
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -257,12 +260,10 @@ task('deploy', [
     'deploy:release',
     'deploy:update_code',
     'deploy:shared',
-    'deploy:writable',
     'deploy:clear_paths',
     'deploy:symlink',
     'deploy:unlock',
     'cleanup',
-    'signoff',
     'success'
 ])->desc('Deploy your project');
 
@@ -277,6 +278,8 @@ task('signoff', function () {
     run('echo "' . $signoff . '" >> revisions.log');
     writeln('<info>' . $signoff . '</info>');
 })->setPrivate();
+
+after('cleanup', 'signoff');
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Hide uncommon tasks from the CLI

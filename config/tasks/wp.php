@@ -90,7 +90,6 @@ task('setup:wp:remote', function () {
     // Print results
     wp_print_finish($wp_user, $wp_pwd, $wp_email, $domain);
 })->setPrivate();
-before('setup:wp:remote', 'composer-install');
 
 /**
  * Install WordPress on a local environment
@@ -278,7 +277,8 @@ function wp_config_create(
     string $db_host,
     string $locale = 'en_GB'
 ) {
-    if (get('stage') == 'local') {
+    $stage = get('stage', 'local');
+    if ($stage == 'local') {
         $project_root = get('abspath');
         $config_root = realpath(dirname(__DIR__));
     } else {
@@ -292,15 +292,22 @@ function wp_config_create(
     $path_to_generated_wpconfig = $project_root . 'wordpress/wp-config.php';
 
     // Create the wp-config.php file
-    $extras = $config_root . '/templates/extras.php';
     $cmd = "{{bin/wp}} config create --dbname=\"$db_name\" \
-        --dbuser=\"$db_username\" \
-        --dbpass=\"$db_password\" \
-        --dbhost=\"$db_host\" \
-        --locale=\"$locale\" \
-        --force";
+    --dbuser=\"$db_username\" \
+    --dbpass=\"$db_password\" \
+    --dbhost=\"$db_host\" \
+    --locale=\"$locale\" \
+    --force";
 
-    if (file_exists($extras)) {
+    $extras = $config_root . '/templates/extras.php';
+
+    if ($stage == 'local') {
+        $extras_exists = testLocally("[ -f $extras ]");
+    } else {
+        $extras_exists = test("[ -f $extras ]");
+    }
+
+    if ($extras_exists) {
         $cmd =
             "tail -n+2 '$extras' | " .
             ($cmd .= ' \
