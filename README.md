@@ -33,9 +33,7 @@ WordPress-based project.
 
 ## Starting a new project
 
-To get started, you'll need to download the latest release from Github and unzip it into the root of your project.
-
-Next, you'll want to install a few dependencies.
+To get started, you'll need to install PackerWP into your project using composer
 
 ```
 $ composer require mixd/packerwp
