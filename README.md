@@ -4,7 +4,7 @@ Built by [Mixd](https://github.com/Mixd/)
 
 ![Mixd logo](https://avatars1.githubusercontent.com/u/2025589?s=75 "Mixd - World Class Web Design")
 
-PackerWP is a custom [Deployer](https://deployer.org/) runbook. It was designed as the successor to the legacy Rails
+PackerWP is a custom [Deployer](https://deployer.org/) runbook. It was designed as the successor to the legacy Ruby
 deployment tool [WP Deploy](https://github.com/mixd/wp-deploy) and has been tailored to include all the Capistrano
 tasks that were previously provided by WP Deploy.
 
@@ -38,59 +38,37 @@ To get started, you'll need to download the latest release from Github and unzip
 Next, you'll want to install a few dependencies.
 
 ```
-$ composer require vlucas/phpdotenv deployer/dist
+$ composer require mixd/packerwp
 ```
 
-With Deployer now installed, you can optionally move the deployment binary to your local system to make it easier
+With PackerWP now installed, you should make sure you have the Deployer binary installed to your local system to make it easier
 to run commands.
 
 ```
-$ cp "./vendor/deployer/dist/dep" "/usr/local/bin/dep"; chmod +x "/usr/local/bin/dep";
+$ curl -LO https://deployer.org/deployer.phar
+$ mv deployer.phar /usr/local/bin/dep
+$ chmod +x /usr/local/bin/dep
 ```
 
-Next, you will need to ensure you have created a MySQL database for your project.
-
-Inside the `config` folder you will see an `env` example file. Duplicate and rename it to `.env`.
-Now fill in your environment options.
-
-The minimum required fields are:
-
-    'WP_USER'
-    'WP_EMAIL'
-    'WP_SITENAME'
-    'WP_LOCALURL'
-    'REPOSITORY'
-    'LOCAL_DB_HOST'
-    'LOCAL_DB_NAME'
-    'LOCAL_DB_USER'
-    'LOCAL_DB_PASS'
-
-Now you are ready to set up your local WordPress environment. You should decide how you want to install WordPress
-before continuing.
-
-At Mixd we usually use Composer to manage WordPress and it's associated plugins. You can install WordPress into the
-`wordpress` subdirectory by running:
-
-```
-$ composer require composer/installers johnpbloch/wordpress
-```
 
 ### Setting up
 
-Once you have your `.env` file set, you can install WordPress by running
+PackerWP uses a `deploy.json` file in the root of your project to define all of the environment config.
+
+Run `cp ./vendor/mixd/packerwp/config/deploy.example.json ./deploy.json` to get a copy of the accepted config rules added to the root of your project.
+
+Go ahead and start populating it.
+
+### Tasks
+
+#### Initial WordPress Installation
+Once you have your `config.json` file set up, you can install WordPress by running
 
 ```
 $ dep setup-local-wp
 ```
 
-This task will copy the `wp-config.example.php`, `.htaccess` and `robots.txt` from the `config/templates/local/` folder
-and place them in the project root.
-
-It will then populate the `wp-config.php` file with the local environment variables that are defined in your `.env`
-file.
-
-Finally, it will run the WordPress installation, reset the WordPress Salts and present you with the new admin password
-and a link to the WordPress Admin.
+This task will generate a wp-config.php for you and place it in the project root, then it will run the WordPress installation, reset the WordPress Salts and present you with the new admin password and a link to the WordPress Admin.
 
 >If you need to re-roll the admin password, you can reset it at anytime by running
 >
@@ -101,11 +79,11 @@ and a link to the WordPress Admin.
 >
 >Note: This task will also re-roll the WordPress salts.
 
-### Working with databases
+#### Working with databases
 
 Occasionally you may wish to push or pull your MySQL Database to a specific environment.
 
-Ensure that you have populated the `STAGE_URL` and `DB_$` entries in your `.env` for your target environment.
+Ensure that you have populated the `wp_home_url` and `db_$` entries in your `config.json` for your target environment.
 
 To download a copy of the database from a remote host and import it into your local environment you can run:
 ```
@@ -127,10 +105,9 @@ or
 ```
 $ dep backup-local-db
 ```
-each of these tasks will make a MySQL Backup using `wp db export` and gzip it into a `db_backups` folder in the project
-root.
+each of these tasks will make a MySQL Backup using `wp db export` and gzip it into a `db_backups` folder in the project root.
 
-### Working with uploaded media
+#### Working with uploaded media
 
 To download the WordPress upload folder from a remote host run:
 ```
@@ -142,7 +119,7 @@ To upload your local WordPress upload folder to a remote host run:
 $ dep push-local-uploads [stage]
 ```
 
-### Deployment
+#### Deployment
 
 If you're ready to deploy your work to a remote host, simply run:
 ```
