@@ -152,14 +152,12 @@ set('git_tty', true);
 // Define a directory that is shared between deployments
 set('shared_dirs', [
     'content/uploads',
-    'content/cache',
     'content/w3tc-config' // W3 Total Cache wants to write it's own config to disk
 ]);
 
 // Define web user writeable directories
 set('writable_dirs', [
     'content/uploads',
-    'content/cache',
     'content/w3tc-config' // W3 Total Cache wants to write it's own config to disk
 ]);
 
@@ -252,6 +250,8 @@ task('deploy', [
     'cleanup',
     'success'
 ])->desc('Deploy your project');
+
+fail('deploy', 'deploy:unlock');
 
 /**
  * Log the deployment info into a revisions file in the deployment path
