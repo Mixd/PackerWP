@@ -6,7 +6,13 @@
         "wp_sitename": "My cool site",
         "wp_home_url": "http://my-cool-site.test",
         "is_multisite": false,
-        "rewrite": []
+        "rewrite": [
+            {
+                "local": "http://a.example.dev",
+                "staging": "https://a.example.co.uk",
+                "production": "https://a.example.com"
+            }
+        ]
     },
     "environments": {
         "local": {

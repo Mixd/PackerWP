@@ -226,36 +226,31 @@ task('reset', function () {
         false
     );
     if ($confirm == true) {
-        // Reset database
         $cmd = '{{bin/wp}} db reset --yes';
         if ($stage == 'local') {
             if (
                 test('{{bin/wp}} core is-installed') or
                 test('{{bin/wp}} core is-installed --network')
             ) {
-                runLocally($cmd, ['tty' => true]);
+                runLocally($cmd);
             }
         } else {
-            within('{{release_path}}', function () use ($cmd) {
-                run($cmd, ['tty' => true]);
-            });
-        }
-
-        // Remove wp-config.php (optional)
-        $path_to_wpconfig = $abs . 'wp-config.php';
-        $cmd = "rm -i '$path_to_wpconfig'";
-        if ($stage == 'local') {
-            if (file_exists($path_to_wpconfig)) {
-                runLocally($cmd, ['tty' => true]);
+            if (test('[ -d {{current_path}} ]')) {
+                within('{{current_path}}', function () use ($cmd) {
+                    if (
+                        test('{{bin/wp}} core is-installed') or
+                        test('{{bin/wp}} core is-installed --network')
+                    ) {
+                        run($cmd);
+                    }
+                });
+                run('rm -rfv {{current_path}}', ['tty' => true]);
+                run('rm -rfv {{deploy_path}}/current', ['tty' => true]);
             }
-        } else {
-            within('{{release_path}}', function () use ($cmd, $abs) {
-                if (file_exists('wp-config.php')) {
-                    run($cmd, ['tty' => true]);
-                }
-            });
         }
     }
+
+    invoke('deploy:unlock');
 })->desc('Reset the WordPress database and installation');
 
 /**
