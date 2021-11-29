@@ -208,7 +208,7 @@ task('reset', function () {
         $domain = $env_config['wp_home_url'];
     }
 
-    if (get('stage') == 'local') {
+    if (get('stage', 'local') == 'local') {
         $abs = get('abspath');
     } else {
         $abs = get('release_path') . '/';
@@ -249,8 +249,6 @@ task('reset', function () {
             }
         }
     }
-
-    invoke('deploy:unlock');
 })->desc('Reset the WordPress database and installation');
 
 /**
@@ -318,6 +316,7 @@ function wp_config_create(
         '!!debug!!',
         $params['wp_debug'] ?? 'false'
     );
+    searchreplaceinfile($path_to_generated_wpconfig, '!!stage!!', $stage);
 
     return $result;
 }

@@ -18,6 +18,16 @@ define(
 define('WP_DEBUG', !!debug!!);
 
 /**
+ * Define the environment type
+ */
+define('WP_ENVIRONMENT_TYPE', '!!stage!!');
+
+/**
+ * Force SSL for wp-admin if not on a *.local domain
+ */
+define('FORCE_SSL_ADMIN', strpos(WP_HOME, '.local') === false);
+
+/**
  * Handle reverse proxy, passing the IP to the server.
  * This is used by some plugins to fetch the user's IP.
  */
