@@ -386,7 +386,7 @@ function wp_core_install(
  */
 function wp_after_install(string $domain)
 {
-    if (get('stage') == 'local') {
+    if (get('stage', 'local') == 'local') {
         $project_root = get('abspath');
     } else {
         $project_root = get('release_path') . '/';
