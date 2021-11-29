@@ -60,7 +60,7 @@ Go ahead and start populating it.
 ### Tasks
 
 #### Initial WordPress Installation
-Once you have your `config.json` file set up, you can install WordPress by running
+Once you have your `deploy.json` file set up, you can install WordPress by running
 
 ```
 $ dep setup-local-wp
@@ -81,7 +81,7 @@ This task will generate a wp-config.php for you and place it in the project root
 
 Occasionally you may wish to push or pull your MySQL Database to a specific environment.
 
-Ensure that you have populated the `wp_home_url` and `db_$` entries in your `config.json` for your target environment.
+Ensure that you have populated the `wp_home_url` and `db_$` entries in your `deploy.json` for your target environment.
 
 To download a copy of the database from a remote host and import it into your local environment you can run:
 ```
