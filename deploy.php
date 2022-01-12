@@ -146,8 +146,9 @@ function getconfig()
 // Define a list of files that should be shared between deployments
 set('shared_files', ['wp-config.php', '.htaccess', 'robots.txt']);
 
-// Allow interaction for Git clone
-set('git_tty', true);
+// Do not allow interaction for Git clone when used with CI/CD
+$allow_tty = (bool) !$_SERVER["DOING_AUTOMATION"] ?: false;
+set('git_tty', $allow_tty);
 
 // Define a directory that is shared between deployments
 set('shared_dirs', [
@@ -165,8 +166,8 @@ set('writable_dirs', [
 set('writable_mode', 'chgrp'); // chmod, chown, chgrp or acl.
 set('writable_chmod_mode', '775');
 
-// Default to using git clone --recursive
-set('git_recursive', true);
+// Default to only shallow clone
+set('git_recursive', false);
 
 // Set apache config options
 set('http_user', function () {
