@@ -290,6 +290,7 @@ function wp_config_create(
     --dbpass=\"$db_password\" \
     --dbhost=\"$db_host\" \
     --locale=\"$locale\" \
+    --skip-check \
     --force";
 
     $extras = $config_root . '/templates/extras.php';
