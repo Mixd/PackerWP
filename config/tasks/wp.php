@@ -244,8 +244,8 @@ task('reset', function () {
                         run($cmd);
                     }
                 });
-                run('rm -rfv {{current_path}}', ['tty' => true]);
-                run('rm -rfv {{deploy_path}}/current', ['tty' => true]);
+                run('rm -rfv {{current_path}}', ['tty' => ALLOW_TTY]);
+                run('rm -rfv {{deploy_path}}/current', ['tty' => ALLOW_TTY]);
             }
         }
     }
@@ -307,7 +307,7 @@ function wp_config_create(
         --extra-php');
     }
 
-    $result = run($cmd, ['tty' => true]);
+    $result = run($cmd, ['tty' => ALLOW_TTY]);
 
     // Run a search-replace with the necessary values
     searchreplaceinfile($path_to_generated_wpconfig, '!!site_url!!', $domain);
@@ -351,7 +351,7 @@ function wp_core_install(
             --admin_email=\"$wp_email\" \
             --skip-email \
             --subdomains",
-            ['tty' => true]
+            ['tty' => ALLOW_TTY]
         );
         // Write notice about multisite
         writeln('');
@@ -368,7 +368,7 @@ function wp_core_install(
             --admin_password=\"$wp_pwd\" \
             --admin_email=\"$wp_email\" \
             --skip-email",
-            ['tty' => true]
+            ['tty' => ALLOW_TTY]
         );
     }
 
