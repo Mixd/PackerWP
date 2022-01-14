@@ -17,9 +17,6 @@ require 'recipe/common.php';
 define('ENV_PATH', realpath(getcwd()) . '/');
 define('ENV_FILE', ENV_PATH . 'deploy.json');
 
-// Do not allow interaction for Git clone when used with CI/CD
-define('ALLOW_TTY', (bool) !$_SERVER["DOING_AUTOMATION"] ?: false);
-
 // Define the project root
 set('abspath', ENV_PATH);
 
@@ -146,11 +143,14 @@ function getconfig()
 //// Below be dragons - tread carefully!
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Do not allow interaction for when used with CI/CD
+set('allow_input', get('user') != 'Continuous Integration');
+
 // Define a list of files that should be shared between deployments
 set('shared_files', ['wp-config.php', '.htaccess', 'robots.txt']);
 
 // Should a TTY be opened for Git?
-set('git_tty', ALLOW_TTY);
+set('git_tty', get('allow_input'));
 
 // Define a directory that is shared between deployments
 set('shared_dirs', [

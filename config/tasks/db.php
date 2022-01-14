@@ -4,27 +4,11 @@ namespace Deployer;
 
 use Exception;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Database related tasks
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-task('pull-remote-db', [
-    'backup-local-db',
-    'backup-remote-db',
-    'db:import:local'
-])->desc(
-    'Pull down a copy of the database from the remote host and import it into your local env'
-);
-
-task('push-local-db', [
-    'db:confirm',
-    'backup-remote-db',
-    'backup-local-db',
-    'db:import:remote'
-])->desc(
-    'Push up a local copy of a database and import it into the remote host'
-);
-
+/**
+ * Backup Remote Database
+ *
+ * Performs a 'wp db export' on the remote environment, gzips it, then downloads it
+ */
 task('backup-remote-db', function () {
     $local_db_path = get('abspath') . 'db_backups/';
     $remote_db_path = get('folder');
@@ -40,6 +24,11 @@ task('backup-remote-db', function () {
     ]);
 })->desc('Backup a copy of a remote database and download it');
 
+/**
+ * Backup Local Database
+ *
+ * Performs a 'wp db export' on your local environment and gzips it
+ */
 task('backup-local-db', function () {
     $local_db_path = get('abspath') . 'db_backups/';
     $file = get('file');
@@ -48,6 +37,12 @@ task('backup-local-db', function () {
     runLocally('wp db export - | gzip > "' . $local_db_path . $file . '"');
 })->desc('Backup a copy of a local database');
 
+/**
+ * Import Database (remote)
+ *
+ * Uploads a local gzipped database, un-gzips it, imports it using 'wp db import',
+ * then performs a search and replace using 'wp search-replace'
+ */
 task('db:import:remote', function () {
     $remote_db_path = get('folder');
     $local_db_path = get('abspath') . 'db_backups/';
@@ -65,6 +60,12 @@ task('db:import:remote', function () {
     run('rm ' . $remote_db_path . $file);
 })->setPrivate();
 
+/**
+ * Import Database (local)
+ *
+ * Un-gzips a previously downloaded database export, then imports it using 'wp db import',
+ * then performs a search and replace using 'wp search-replace'
+ */
 task('db:import:local', function () {
     $local_db_path = get('abspath') . 'db_backups/';
     $file = get('file');
@@ -74,6 +75,11 @@ task('db:import:local', function () {
     runLocally("rm '" . $local_db_path . get('file') . "'");
 })->setPrivate();
 
+/**
+ * Database preflight check
+ *
+ * Sets a destination filename and folder for use when handling database backups
+ */
 task('db:prepare', function () {
     $stage = get('stage', 'local');
     $file = $stage . '_' . date('YmdHis') . '.sql.gz';
@@ -90,6 +96,11 @@ task('db:prepare', function () {
     set('folder', $folder);
 })->setPrivate();
 
+/**
+ * Database viability check
+ *
+ * Tests to see if the database you want to operate on exists on the database host you specified
+ */
 task('db:reachable', function () {
     $stage = get('stage', 'local');
     $params = getenvbag($stage);
@@ -115,6 +126,11 @@ task('db:reachable', function () {
     }
 })->setPrivate();
 
+/**
+ * Database Rewrite (remote)
+ *
+ * Performs a search and replace of the remote database using 'wp search-replace'
+ */
 task('db:rewrite:remote', function () {
     $stage = get('stage');
     $wp_config = getconfig();
@@ -151,6 +167,11 @@ task('db:rewrite:remote', function () {
     }
 })->setPrivate();
 
+/**
+ * Database Rewrite (local)
+ *
+ * Performs a search and replace of the local database using 'wp search-replace'
+ */
 task('db:rewrite:local', function () {
     $stage = get('stage');
     $wp_config = getconfig();
@@ -188,7 +209,19 @@ task('db:rewrite:local', function () {
     }
 })->setPrivate();
 
+/**
+ * Database confirmation
+ *
+ * When executing 'push' tasks, you must double-check your action before continuing
+ *
+ * Note: you cannot perform overwrites when using PackerWP with Continuous Integration
+ */
 task('db:confirm', function () {
+    // Safety net to prevent database overwriting using CI/CD
+    if (get('allow_input') == false) {
+        throw new Exception("You cannot operate on databases when using non-interactive mode");
+    }
+
     $stage = get('stage');
     $params = getenvbag($stage);
     $db_name = $params['db_name'];
@@ -223,14 +256,35 @@ task('db:confirm', function () {
     }
 })->setPrivate();
 
+/**
+ * Group subtasks together for the 'pull-remote-db' primary task
+ */
+task('pull-remote-db', [
+    'backup-local-db',
+    'backup-remote-db',
+    'db:import:local'
+])->desc(
+    'Pull down a copy of the database from the remote host and import it into your local env'
+);
+
+/**
+ * Group subtasks together for the 'push-local-db' primary task
+ */
+task('push-local-db', [
+    'db:confirm',
+    'backup-remote-db',
+    'backup-local-db',
+    'db:import:remote'
+])->desc(
+    'Push up a local copy of a database and import it into the remote host'
+);
+
 before('backup-remote-db', 'db:reachable');
 before('backup-remote-db', 'deploy:lock');
 before('backup-remote-db', 'db:prepare');
-
 before('backup-local-db', 'db:prepare');
-
 before('db:import:remote', 'deploy:lock');
 before('db:import:remote', 'db:reachable');
-after('db:import:remote', 'deploy:unlock');
 
+after('db:import:remote', 'deploy:unlock');
 after('backup-remote-db', 'deploy:unlock');

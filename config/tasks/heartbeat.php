@@ -2,10 +2,11 @@
 
 namespace Deployer;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Heartbeat invokes a rollback if the site doesnt respond with a 200 OK post-deploy
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * Heartbeat
+ *
+ * Performs a HTTP health check on the WordPress Home URL to determine if a deployment was successful
+ */
 task('deploy:heartbeat', function () {
     $stage = get('stage', 'local');
     $params = getenvbag($stage);
@@ -17,11 +18,21 @@ task('deploy:heartbeat', function () {
     $status_code = substr($response, -6);
 
     $is_200_ok = strpos($status_code, '200') !== false;
+    $is_401 = strpos($status_code, '401') !== false;
     $is_3XX_redirect =
         strpos($status_code, '301') !== false ||
         strpos($status_code, '302') !== false;
 
-    if ($is_200_ok) {
+    if (get('allow_input') == false) {
+        write("<comment>
+    ========================================================================
+        Deployment triggered non-interactively.
+        If this task fails a rollback will be automatically triggered
+    ========================================================================</comment>
+");
+    }
+
+    if ($is_200_ok or $is_401) {
         write("<info>
     ========================================================================
         $domain responded with $response
@@ -35,7 +46,11 @@ task('deploy:heartbeat', function () {
         $domain responded with $response
     ========================================================================</comment>
 ");
-        $confirm = askConfirmation('Do you want to rollback?', false);
+        if (get('allow_input')) {
+            $confirm = askConfirmation('Do you want to rollback?', false);
+        } else {
+            $confirm = false;
+        }
     } else {
         write("<error>
     ========================================================================
@@ -43,7 +58,11 @@ task('deploy:heartbeat', function () {
         $domain responded with $response
     ========================================================================</error>
 ");
-        $confirm = askConfirmation('Do you want to rollback?', false);
+        if (get('allow_input')) {
+            $confirm = askConfirmation('Do you want to rollback?', false);
+        } else {
+            $confirm = true;
+        }
     }
 
     if ($confirm == true) {

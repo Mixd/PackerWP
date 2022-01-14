@@ -2,19 +2,25 @@
 
 namespace Deployer;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Fractal related tasks
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * Detect Fractal
+ *
+ * Detects if your project has a 'fractal.config.js' file in the root. If it does
+ * you are prompted to build it using 'npm run build:fractal'
+ */
 task('fractal:detect', function () {
     $project_root = get('abspath');
     if (file_exists($project_root . '/fractal.config.js')) {
         writeln('');
 
-        $do_build = askConfirmation(
-            "'fractal.config.js' detected! Do you want to build it?",
-            false
-        );
+        if (get('allow_input')) {
+            $do_build = askConfirmation(
+                "'fractal.config.js' detected! Do you want to build it?",
+                false
+            );
+        } else {
+            $do_build = true;
+        }
 
         if ($do_build == true) {
             invoke('fractal:build');
@@ -24,6 +30,11 @@ task('fractal:detect', function () {
     }
 })->setPrivate();
 
+/**
+ * Build Fractal
+ *
+ * Performs an 'npm run fractal:build'
+ */
 task('fractal:build', function () {
     writeln('<info>Installing fractal binary</info>');
     if (
@@ -38,7 +49,7 @@ task('fractal:build', function () {
     cd('{{release_path}}');
     run('{{bin/npm}} install @frctl/fractal @frctl/twig');
     run('{{bin/npm}} run build:fractal', [
-        'tty' => true
+        'tty' => get('allow_tty')
     ]);
 })->desc('Build Fractal pattern library');
 

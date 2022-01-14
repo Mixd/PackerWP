@@ -2,10 +2,11 @@
 
 namespace Deployer;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Composer related tasks
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * Composer
+ *
+ * Runs a composer install
+ */
 task('composer:install', function () {
     $project_root = get('abspath');
     if (file_exists($project_root . '/composer.json')) {
@@ -21,7 +22,7 @@ task('composer:install', function () {
             run('cp -R {{previous_release}}/vendor {{release_path}}/vendor');
         }
         run('cd {{release_path}} && {{bin/composer}} {{composer_options}}', [
-            'tty' => true
+            'tty' => get('allow_tty')
         ]);
     }
 })->setPrivate();

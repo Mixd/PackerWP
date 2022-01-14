@@ -4,29 +4,11 @@ namespace Deployer;
 
 use Exception;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// WordPress setup related tasks
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-task('setup-wp', [
-    'deploy:info',
-    'deploy:prepare',
-    'deploy:lock',
-    'deploy:release',
-    'deploy:update_code',
-    'setup:wp:remote',
-    'deploy:shared',
-    'deploy:writable',
-    'deploy:clear_paths',
-    'deploy:symlink',
-    'deploy:unlock',
-    'cleanup'
-])->desc('Set up your project on the remote host');
-
 /**
- * Prevents an accidental re-run of the setup task
+ * WordPress setup check
+ *
+ * Determine if WordPress is already installed
  */
-before('setup-wp', 'setup:wp:check');
 task('setup:wp:check', function () {
     if (test('[ -d {{deploy_path}}/current ]')) {
         within('{{release_path}}', function () {
@@ -44,7 +26,9 @@ task('setup:wp:check', function () {
 })->setPrivate();
 
 /**
- * Install WordPress on a target environment
+ * Setup WordPress (remote)
+ *
+ * Install WordPress on a remote environment
  */
 task('setup:wp:remote', function () {
     $config = getconfig();
@@ -92,6 +76,8 @@ task('setup:wp:remote', function () {
 })->setPrivate();
 
 /**
+ * Setup WordPress (local)
+ *
  * Install WordPress on a local environment
  */
 task('setup-local-wp', function () {
@@ -143,7 +129,36 @@ task('setup-local-wp', function () {
     ->local();
 
 /**
- * Reset the WordPress Administrator password and shuffle the WordPress salts
+ * Setup Shared Files
+ *
+ * Set up a .htaccess and a robots.txt for your target environment
+ */
+task('copy:shared', function () {
+    $stage = get('stage', 'local');
+
+    if ($stage == 'local') {
+        $abs = get('abspath');
+    } else {
+        $abs = get('current_path') . '/';
+    }
+
+    $files = get('shared_files');
+    if (!empty($files)) {
+        foreach ($files as $filename) {
+            $src = $abs . 'vendor/mixd/packewp/config/templates/' . $stage . '/' . $filename;
+            $dest = $abs . $filename;
+            if (file_exists($src) == true) {
+                writeln("<info>Copying $src to $dest</info>");
+                run("cp '$src' '$dest'");
+            }
+        }
+    }
+})->setPrivate();
+
+/**
+ * Reset Administrator Password
+ *
+ * Reset the WordPress Administrator password and shuffles the WordPress salts
  */
 task('reset-admin-pwd', function () {
     $config = getconfig();
@@ -151,13 +166,19 @@ task('reset-admin-pwd', function () {
 
     $wp_pwd = wp_password_create();
     $stage = get('stage', 'local');
-    $confirm = askConfirmation(
-        "
-    Are you sure you wish to reset the password for '" .
-            $wp_user .
-            "'?",
-        false
-    );
+
+    if (get('allow_input')) {
+        $confirm = askConfirmation(
+            "
+        Are you sure you wish to reset the password for '" .
+                $wp_user .
+                "'?",
+            false
+        );
+    } else {
+        $confirm = true;
+    }
+
     if ($confirm !== true) {
         writeln("<error>
     ========================================================================
@@ -187,17 +208,26 @@ task('reset-admin-pwd', function () {
 })->desc('Reset the super admin password on the target environment');
 
 /**
+ * 'Pull' Helper
+ *
  * Pull both WordPress uploads and a database from a given host
  */
 task('pull', ['pull-remote-db', 'pull-remote-uploads'])->desc(
     'Pull both WordPress uploads and a database from a given host'
 );
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Eject button
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * Reset
+ *
+ * Empty your database and optionally reset your wp-config.php
+ *
+ * Note: You cannot reset an installation when using Continuous Integration
+ */
 task('reset', function () {
+    if (get('allow_input') == false) {
+        throw new Exception("You cannot reset an installation using non-interactive mode");
+    }
+
     $wp_config = getconfig();
     $stage = get('stage', 'local');
     $env_config = getenvbag($stage);
@@ -244,8 +274,8 @@ task('reset', function () {
                         run($cmd);
                     }
                 });
-                run('rm -rfv {{current_path}}', ['tty' => ALLOW_TTY]);
-                run('rm -rfv {{deploy_path}}/current', ['tty' => ALLOW_TTY]);
+                run('rm -rfv {{current_path}}', ['tty' => get('allow_input')]);
+                run('rm -rfv {{deploy_path}}/current', ['tty' => get('allow_input')]);
             }
         }
     }
@@ -352,7 +382,7 @@ function wp_core_install(
             --admin_email=\"$wp_email\" \
             --skip-email \
             --subdomains",
-            ['tty' => ALLOW_TTY]
+            ['tty' => get('allow_input')]
         );
         // Write notice about multisite
         writeln('');
@@ -369,7 +399,7 @@ function wp_core_install(
             --admin_password=\"$wp_pwd\" \
             --admin_email=\"$wp_email\" \
             --skip-email",
-            ['tty' => ALLOW_TTY]
+            ['tty' => get('allow_input')]
         );
     }
 
@@ -442,3 +472,25 @@ function wp_password_create(int $length = 24)
 {
     return bin2hex(openssl_random_pseudo_bytes($length));
 }
+
+task('setup-wp', [
+    'deploy:info',
+    'deploy:prepare',
+    'deploy:lock',
+    'deploy:release',
+    'deploy:update_code',
+    'setup:wp:remote',
+    'deploy:shared',
+    'deploy:writable',
+    'deploy:clear_paths',
+    'deploy:symlink',
+    'deploy:unlock',
+    'cleanup'
+])->desc('Set up your project on the remote host');
+
+/**
+ * Prevents an accidental re-run of the setup task
+ */
+before('setup-wp', 'setup:wp:check');
+
+before('deploy:shared', 'copy:shared');
