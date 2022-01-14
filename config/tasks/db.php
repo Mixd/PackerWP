@@ -125,7 +125,7 @@ task('db:rewrite:remote', function () {
 
     writeln('<info>Processing URL replacements</info>');
     writeln("<comment>$from → $to</comment>");
-    runLocally(
+    run(
         "wp search-replace --report-changed-only --all-tables $from $to",
         [
             'tty' => true,
@@ -140,7 +140,7 @@ task('db:rewrite:remote', function () {
 
             writeln("<comment>$from → $to</comment>");
 
-            runLocally(
+            run(
                 "wp search-replace --report-changed-only --all-tables $from $to",
                 [
                     'tty' => true,
