@@ -310,7 +310,7 @@ function wp_config_create(
     }
 
     writeln('');
-    writeln('<comment>Creating wp-config.php...</comment>');
+    writeln('<comment>Creating wp-config.php</comment>');
 
     $path_to_generated_wpconfig = $project_root . 'wordpress/wp-config.php';
 
@@ -493,4 +493,7 @@ task('setup-wp', [
  */
 before('setup-wp', 'setup:wp:check');
 
-before('deploy:shared', 'copy:shared');
+/**
+ * Ensure .htaccess and robots.txt are copied
+ */
+after('deploy:shared', 'copy:shared');
