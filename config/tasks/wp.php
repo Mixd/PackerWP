@@ -145,9 +145,11 @@ task('copy:templates', function () {
     $files = get('templates');
     if (!empty($files)) {
         foreach ($files as $filename) {
-            $src = $abs . 'vendor/mixd/packewp/config/templates/' . $stage . '/' . $filename;
+            $src = pathinfo(__DIR__)['dirname'] . '/templates/' . $stage . '/' . $filename;
             $dest = $abs . $filename;
+
             if (file_exists($src) == true) {
+                writeln("<info>Copying:</info> <comment>'$filename'</comment>");
                 run("cp -rv '$src' '$dest'");
             }
         }
