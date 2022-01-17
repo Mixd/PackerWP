@@ -134,27 +134,20 @@ task('setup-local-wp', function () {
  * Set up a .htaccess and a robots.txt for your target environment
  */
 task('copy:templates', function () {
+    $files = get('templates');
+
     $stage = get('stage', 'local');
 
-    if ($stage == 'local') {
-        $abs = get('abspath');
-    } else {
-        $abs = get('release_path') . '/';
-    }
+    $root = $stage == 'local' ? '.' : get('release_path');
 
-    $files = get('templates');
     if (!empty($files)) {
         foreach ($files as $filename) {
-            $src = pathinfo(__DIR__)['dirname'] . '/templates/' . $stage . '/' . $filename;
-            $dest = $abs . $filename;
-
-            if (file_exists($src) == true) {
-                writeln("<info>Copying:</info> <comment>'$filename'</comment>");
-                run("cp -rv '$src' '$dest'");
-            }
+            $src = get('abspath') . 'vendor/mixd/packerwp/config/templates/' . $stage . '/' . $filename;
+            $dest = $root . '/' . $filename;
+            upload($src, $dest);
         }
     }
-})->setPrivate();
+})->desc('Set the robots.txt and .htaccess files');
 
 /**
  * Reset Administrator Password
@@ -497,5 +490,5 @@ before('setup-wp', 'setup:wp:check');
 /**
  * Ensure .htaccess and robots.txt are copied
  */
-after('setup-wp', 'copy:templates');
+before('deploy:shared', 'copy:templates');
 after('setup-local-wp', 'copy:templates');
