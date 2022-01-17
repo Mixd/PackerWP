@@ -236,7 +236,7 @@ set('bin/composer', function () {
     }
 
     if (commandExist('composer')) {
-        return which('composer');
+        return run("command -v 'composer' || which 'composer' || type -p 'composer'");
     }
 
     warning("Composer binary wasn't found. Installing latest composer to \"{{deploy_path}}/.dep/composer.phar\".");
