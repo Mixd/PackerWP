@@ -22,7 +22,7 @@ task('composer:install', function () {
             run('cp -R {{previous_release}}/vendor {{release_path}}/vendor');
         }
         run('cd {{release_path}} && {{bin/composer}} {{composer_options}}', [
-            'tty' => get('allow_tty')
+            'tty' => get('allow_input')
         ]);
     }
 })->setPrivate();

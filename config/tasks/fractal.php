@@ -49,7 +49,7 @@ task('fractal:build', function () {
     cd('{{release_path}}');
     run('{{bin/npm}} install @frctl/fractal @frctl/twig');
     run('{{bin/npm}} run build:fractal', [
-        'tty' => get('allow_tty')
+        'tty' => get('allow_input')
     ]);
 })->desc('Build Fractal pattern library');
 
