@@ -133,23 +133,22 @@ task('setup-local-wp', function () {
  *
  * Set up a .htaccess and a robots.txt for your target environment
  */
-task('copy:shared', function () {
+task('copy:templates', function () {
     $stage = get('stage', 'local');
 
     if ($stage == 'local') {
         $abs = get('abspath');
     } else {
-        $abs = get('current_path') . '/';
+        $abs = get('release_path') . '/';
     }
 
-    $files = get('shared_files');
+    $files = get('templates');
     if (!empty($files)) {
         foreach ($files as $filename) {
             $src = $abs . 'vendor/mixd/packewp/config/templates/' . $stage . '/' . $filename;
             $dest = $abs . $filename;
             if (file_exists($src) == true) {
-                writeln("<info>Copying $src to $dest</info>");
-                run("cp '$src' '$dest'");
+                run("cp -rv '$src' '$dest'");
             }
         }
     }
@@ -496,4 +495,5 @@ before('setup-wp', 'setup:wp:check');
 /**
  * Ensure .htaccess and robots.txt are copied
  */
-after('deploy:shared', 'copy:shared');
+after('setup-wp', 'copy:templates');
+after('setup-wp-local', 'copy:templates');

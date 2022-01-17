@@ -149,6 +149,9 @@ set('allow_input', get('user') != 'Continuous Integration');
 // Define a list of files that should be shared between deployments
 set('shared_files', ['wp-config.php', '.htaccess', 'robots.txt']);
 
+// Define a list of files that should be copied from the 'templates' folder to the root
+set('templates', ['.htaccess', 'robots.txt']);
+
 // Should a TTY be opened for Git?
 set('git_tty', get('allow_input'));
 
