@@ -2,7 +2,8 @@
 
 namespace Deployer;
 
-set('composer_options', '--prefer-dist --no-dev --optimize-autoloader');
+set('composer_action', 'install');
+set('composer_options', '--verbose --prefer-dist --no-progress --no-interaction --no-dev --optimize-autoloader');
 
 /**
  * Composer
@@ -23,7 +24,8 @@ task('composer:install', function () {
         ) {
             run('cp -R {{previous_release}}/vendor {{release_path}}/vendor');
         }
-        run('cd {{release_path}} && {{bin/composer}} {{composer_options}}', [
+
+        run('cd {{release_path}} && {{bin/composer}} {{composer_action}} {{composer_options}} 2>&1', [
             'tty' => get('allow_input')
         ]);
     }

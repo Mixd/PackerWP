@@ -228,6 +228,23 @@ set('bin/npm', function () {
     return run("command -v 'npm' || which 'npm' || type -p 'npm'");
 });
 
+// Returns Composer binary path in found. Otherwise try to install latest
+// composer version to `.dep/composer.phar`.
+set('bin/composer', function () {
+    if (test('[ -f {{deploy_path}}/.dep/composer.phar ]')) {
+        return '{{bin/php}} {{deploy_path}}/.dep/composer.phar';
+    }
+
+    if (commandExist('composer')) {
+        return which('composer');
+    }
+
+    warning("Composer binary wasn't found. Installing latest composer to \"{{deploy_path}}/.dep/composer.phar\".");
+    run("cd {{deploy_path}} && curl -sS https://getcomposer.org/installer | {{bin/php}}");
+    run('mv {{deploy_path}}/composer.phar {{deploy_path}}/.dep/composer.phar');
+    return '{{bin/php}} {{deploy_path}}/.dep/composer.phar';
+});
+
 // Every release should be datetime stamped
 set('release_name', date('YmdHis'));
 
