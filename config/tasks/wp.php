@@ -496,4 +496,4 @@ before('setup-wp', 'setup:wp:check');
  * Ensure .htaccess and robots.txt are copied
  */
 after('setup-wp', 'copy:templates');
-after('setup-wp-local', 'copy:templates');
+after('setup-local-wp', 'copy:templates');
