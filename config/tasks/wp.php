@@ -332,7 +332,7 @@ function wp_config_create(
         --extra-php');
     }
 
-    $result = run($cmd, ['tty' => allow_input]);
+    $result = run($cmd, ['tty' => get('allow_input')]);
 
     // Run a search-replace with the necessary values
     searchreplaceinfile($path_to_generated_wpconfig, '!!site_url!!', $domain);
