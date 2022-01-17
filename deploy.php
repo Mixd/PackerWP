@@ -155,6 +155,14 @@ set('templates', ['.htaccess', 'robots.txt']);
 // Should a TTY be opened for Git?
 set('git_tty', get('allow_input'));
 
+// Set the directory where shared files are set
+set('shared_dir', function () {
+    if (get('stage', 'local') == 'local') {
+        return get('abspath');
+    }
+    return get('deploy_path') . '/shared/';
+});
+
 // Define a directory that is shared between deployments
 set('shared_dirs', [
     'content/uploads',
