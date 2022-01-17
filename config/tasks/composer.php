@@ -2,6 +2,8 @@
 
 namespace Deployer;
 
+set('composer_options', '--prefer-dist --no-dev --optimize-autoloader');
+
 /**
  * Composer
  *
