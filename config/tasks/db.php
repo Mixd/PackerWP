@@ -140,29 +140,14 @@ task('db:rewrite:remote', function () {
     $to = $env_config['wp_home_url'];
 
     writeln('<info>Processing URL replacements</info>');
-    writeln("<comment>$from → $to</comment>");
-    run(
-        "wp search-replace --report-changed-only --all-tables $from $to",
-        [
-            'tty' => true,
-            'timeout' => null
-        ]
-    );
+    wp_search_replace($from, $to, $stage);
 
     if (!empty($wp_config['rewrite'])) {
         foreach ($wp_config['rewrite'] as $ruleset) {
             $from = $ruleset['local'];
             $to = $ruleset[$stage];
 
-            writeln("<comment>$from → $to</comment>");
-
-            run(
-                "wp search-replace --report-changed-only --all-tables $from $to",
-                [
-                    'tty' => true,
-                    'timeout' => null
-                ]
-            );
+            wp_search_replace($from, $to, $stage);
         }
     }
 })->setPrivate();
@@ -181,30 +166,14 @@ task('db:rewrite:local', function () {
     $to = $wp_config['wp_home_url'];
 
     writeln('<info>Processing URL replacements</info>');
-    writeln("<comment>$from → $to</comment>");
-
-    runLocally(
-        "wp search-replace --report-changed-only --all-tables $from $to",
-        [
-            'tty' => true,
-            'timeout' => null
-        ]
-    );
+    wp_search_replace($from, $to, 'local');
 
     if (!empty($wp_config['rewrite'])) {
         foreach ($wp_config['rewrite'] as $ruleset) {
             $from = $ruleset[$stage];
             $to = $ruleset['local'];
 
-            writeln("<comment>$from → $to</comment>");
-
-            runLocally(
-                "wp search-replace --report-changed-only --all-tables $from $to",
-                [
-                    'tty' => true,
-                    'timeout' => null
-                ]
-            );
+            wp_search_replace($from, $to, 'local');
         }
     }
 })->setPrivate();
@@ -288,3 +257,39 @@ before('db:import:remote', 'db:reachable');
 
 after('db:import:remote', 'deploy:unlock');
 after('backup-remote-db', 'deploy:unlock');
+
+/**
+ * Run a `wp search-replace $from $to`
+ *
+ * @param string $from
+ * @param string $to
+ * @return void
+ */
+function wp_search_replace($from, $to, $stage = 'local')
+{
+    writeln("<comment>$from → $to</comment>");
+
+    $runas = __NAMESPACE__ . '\\' . ($stage == 'local' ? 'runLocally' : 'run');
+
+    $runas(
+        "wp search-replace --report-changed-only --all-tables $from $to",
+        [
+            'tty' => get('allow_input'),
+            'timeout' => null
+        ]
+    );
+
+    /**
+     * Bug: https://github.com/Mixd/PackerWP/issues/14
+     * wp search-replace doesnt account for JSON encoded URLs so do a quick and quiet re-run
+     */
+    $from = str_replace('"', '', json_encode($from));
+    $to = str_replace('"', '', json_encode($to));
+    $runas(
+        "wp search-replace --quiet --all-tables $from $to",
+        [
+            'tty' => false,
+            'timeout' => null
+        ]
+    );
+}
