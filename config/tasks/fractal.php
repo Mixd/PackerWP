@@ -13,7 +13,7 @@ task('fractal:detect', function () {
     if (file_exists($project_root . '/fractal.config.js')) {
         writeln('');
 
-        if (get('allow_input')) {
+        if (get('allow_input', false)) {
             $do_build = askConfirmation(
                 "'fractal.config.js' detected! Do you want to build it?",
                 false

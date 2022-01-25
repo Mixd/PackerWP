@@ -143,8 +143,25 @@ function getconfig()
 //// Below be dragons - tread carefully!
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Detect the current operator
+set('user', function () {
+    if (getenv('CI') !== false) {
+        return 'ci';
+    }
+
+    try {
+        return runLocally('git config --get user.name');
+    } catch (\Throwable $exception) {
+        try {
+            return runLocally('whoami');
+        } catch (\Throwable $exception) {
+            return 'no_user';
+        }
+    }
+});
+
 // Do not allow interaction for when used with CI/CD
-set('allow_input', get('user') != 'Continuous Integration');
+set('allow_input', get('user') != 'ci');
 
 // Define a list of files that should be shared between deployments
 set('shared_files', ['wp-config.php', '.htaccess', 'robots.txt']);
