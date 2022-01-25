@@ -152,8 +152,16 @@ set('user', function () {
     }
 });
 
-// Do not allow interaction for when used with CI/CD
-set('allow_input', get('user') != 'runner');
+// Can a user interactive with the TTY?
+set('allow_input', function () {
+    $user = get('user');
+    if ($user != 'runner') {
+        // Do not allow interaction for when used with CI/CD
+        return true;
+    } else {
+        return false;
+    }
+});
 
 // Define a list of files that should be shared between deployments
 set('shared_files', ['wp-config.php', '.htaccess', 'robots.txt']);
@@ -312,7 +320,9 @@ task('debug:info', function () {
         <comment>npm</comment>: ' . get('bin/npm') . '
         <comment>sed</comment>: ' . get('bin/sed') . '
         <comment>composer</comment>: ' . get('bin/composer') . '
-        <comment>php</comment>: ' . get('bin/php')
+        <comment>php</comment>: ' . get('bin/php') . '
+        <comment>git</comment>: ' . get('bin/git') . '
+        <comment>symlink</comment>: ' . get('bin/symlink')
     );
 });
 
