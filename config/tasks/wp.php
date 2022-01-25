@@ -303,6 +303,8 @@ function wp_config_create(
         $config_root = $project_root . 'vendor/mixd/packerwp/config';
     }
 
+    $env_config = getenvbag($stage);
+
     writeln('');
     writeln('<comment>Creating wp-config.php</comment>');
 
@@ -339,7 +341,7 @@ function wp_config_create(
     searchreplaceinfile(
         $path_to_generated_wpconfig,
         '!!debug!!',
-        $params['wp_debug'] ?? 'false'
+        $env_config['wp_debug'] ?? 'false'
     );
     searchreplaceinfile($path_to_generated_wpconfig, '!!stage!!', $stage);
 
