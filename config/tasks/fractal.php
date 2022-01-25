@@ -9,18 +9,24 @@ namespace Deployer;
  * you are prompted to build it using 'npm run build:fractal'
  */
 task('fractal:detect', function () {
+    if (get('allow_input') == false) {
+        write("<comment>
+    ========================================================================
+        Deployment triggered non-interactively.
+        This task will be skipped
+    ========================================================================</comment>
+");
+        return;
+    }
+
     $project_root = get('abspath');
     if (file_exists($project_root . '/fractal.config.js')) {
         writeln('');
 
-        if (get('allow_input', false)) {
-            $do_build = askConfirmation(
-                "'fractal.config.js' detected! Do you want to build it?",
-                false
-            );
-        } else {
-            $do_build = true;
-        }
+        $do_build = askConfirmation(
+            "'fractal.config.js' detected! Do you want to build it?",
+            false
+        );
 
         if ($do_build == true) {
             invoke('fractal:build');
