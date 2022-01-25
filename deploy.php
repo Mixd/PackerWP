@@ -245,21 +245,14 @@ set('bin/npm', function () {
     return run("command -v 'npm' || which 'npm' || type -p 'npm'");
 });
 
-// Returns Composer binary path in found. Otherwise try to install latest
-// composer version to `.dep/composer.phar`.
+// Returns Composer binary path if found
 set('bin/composer', function () {
-    if (test('[ -f {{deploy_path}}/.dep/composer.phar ]')) {
-        return '{{bin/php}} {{deploy_path}}/.dep/composer.phar';
+    if (!commandExist('composer')) {
+        throw new Exception("composer was not detected in your \$PATH");
     }
-
-    if (commandExist('composer')) {
-        return run("command -v 'composer' || which 'composer' || type -p 'composer'");
-    }
-
-    warning("Composer binary wasn't found. Installing latest composer to \"{{deploy_path}}/.dep/composer.phar\".");
-    run("cd {{deploy_path}} && curl -sS https://getcomposer.org/installer | {{bin/php}}");
-    run('mv {{deploy_path}}/composer.phar {{deploy_path}}/.dep/composer.phar');
-    return '{{bin/php}} {{deploy_path}}/.dep/composer.phar';
+    return run(
+        "command -v 'composer' || which 'composer' || type -p 'composer'"
+    );
 });
 
 // Every release should be datetime stamped
@@ -304,6 +297,24 @@ task('signoff', function () {
     run('echo "' . $signoff . '" >> revisions.log');
     writeln('<info>' . $signoff . '</info>');
 })->setPrivate();
+
+
+/**
+ * Helpful debug task
+ */
+task('debug:info', function () {
+    writeln('Current user: <info>' . get('user') . '</info>');
+    writeln('Current branch: <info>' . get('branch') . '</info>');
+    writeln('Supports TTY: <info>' . (get('allow_input') ? 'Yes' : 'No') . '</info>');
+    writeln('Binaries:
+        <comment>wp</comment>: ' . get('bin/wp') . '
+        <comment>curl</comment>: ' . get('bin/curl') . '
+        <comment>npm</comment>: ' . get('bin/npm') . '
+        <comment>sed</comment>: ' . get('bin/sed') . '
+        <comment>composer</comment>: ' . get('bin/composer') . '
+        <comment>php</comment>: ' . get('bin/php')
+    );
+});
 
 after('cleanup', 'signoff');
 
