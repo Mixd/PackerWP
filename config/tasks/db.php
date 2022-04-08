@@ -16,7 +16,7 @@ task('backup-remote-db', function () {
     $file = get('file');
     run('mkdir -p "' . $remote_db_path . '"');
     cd('{{release_path}}');
-    run('wp db export - | gzip > "' . $remote_db_path . $file . '"');
+    run('wp db export --set-gtid-purged=OFF - | gzip > "' . $remote_db_path . $file . '"');
 
     runLocally('mkdir -p "' . $local_db_path . '"');
     download($remote_db_path . $file, $local_db_path . $file, [
@@ -34,7 +34,7 @@ task('backup-local-db', function () {
     $file = get('file');
 
     runLocally('mkdir -p "' . $local_db_path . '"');
-    runLocally('wp db export - | gzip > "' . $local_db_path . $file . '"');
+    runLocally('wp db export --set-gtid-purged=OFF - | gzip > "' . $local_db_path . $file . '"');
 })->desc('Backup a copy of a local database');
 
 /**
