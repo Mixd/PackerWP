@@ -15,11 +15,11 @@
     },
     "suggest": {
         "johnpbloch/wordpress": "Allows you to install WordPress using Composer",
-        "deployer/dist": "Deployer binary to make use of the 'dep' commands"
+        "deployer/deployer": "Deployer binary to make use of the 'dep' commands"
     },
     "license": "GPL-3.0-or-later",
     "require": {
         "php": ">=7.3",
-        "deployer/dist": "^6.8"
+        "deployer/deployer": "~6.8"
     }
 }
