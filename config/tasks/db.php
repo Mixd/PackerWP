@@ -10,18 +10,58 @@ use Exception;
  * Performs a 'wp db export' on the remote environment, gzips it, then downloads it
  */
 task('backup-remote-db', function () {
+    invoke('db:prepare');
+
     $local_db_path = get('abspath') . 'db_backups/';
     $remote_db_path = get('folder');
 
     $file = get('file');
-    run('mkdir -p "' . $remote_db_path . '"');
-    cd('{{release_path}}');
-    run('wp db export --set-gtid-purged=OFF - | gzip > "' . $remote_db_path . $file . '"');
 
-    runLocally('mkdir -p "' . $local_db_path . '"');
-    download($remote_db_path . $file, $local_db_path . $file, [
-        'options' => ['flags' => '-ch']
+    // Create a remote folder to store the backup if it doesn't already exist
+    if (!test('[ -d ' . $remote_db_path . ' ]')) {
+        run('mkdir -p "' . $remote_db_path . '"');
+        writeln('<info>Created ' . $remote_db_path . '</info>');
+    }
+
+    writeln('Using remote backup source folder: <comment>' . $remote_db_path . '</comment>');
+    writeln('Using local backup destination folder: <comment>' . $local_db_path . '</comment>');
+    writeln('Using filename: <comment>' . $file . '</comment>');
+
+    within('{{release_path}}', function () use ($remote_db_path, $file) {
+        // Get a list of all WP Tables that doesn't match SearchWP.
+        // We do this to avoid SWP Token rows that result in duplicate UNIQUE keys and break the export
+        $prefix = run('{{bin/wp}} db prefix');
+        writeln("Detected WordPress table prefix: <comment>$prefix</comment>");
+        writeln('<info>Exporting MySQL Database, please wait...</info>');
+        $tables = run('{{bin/wp}} db tables --all-tables "' . $prefix . 'searchwp*" --format=csv');
+
+        // Run the export but exclude specified tables
+        run(
+            '{{bin/wp}} db export --set-gtid-purged=OFF --defaults --exclude_tables=' .
+                $tables .
+                ' --porcelain ' .
+                $remote_db_path .
+                $file
+        );
+
+        // Zip it up for faster xfer speed
+        writeln('Compressing <comment>' . $file . '</comment> for a faster download...');
+        run('gzip "' . $remote_db_path . $file . '"');
+    });
+
+    // Create a local folder to hold the backup if it doesn't already exist
+    if (!testLocally('[ -d ' . $local_db_path . ' ]')) {
+        runLocally('mkdir -p "' . $local_db_path . '"');
+        writeln('<info>Created ' . $local_db_path . '</info>');
+    }
+
+    // Download the file
+    writeln('<info>Downloading MySQL Database backup...</info>');
+    download($remote_db_path . $file . '.gz', $local_db_path . $file . '.gz', [
+        'options' => ['flags' => '-W']
     ]);
+
+    writeln('Backup completed: <info>' . $local_db_path . $file . '.gz</info>');
 })->desc('Backup a copy of a remote database and download it');
 
 /**
@@ -30,11 +70,47 @@ task('backup-remote-db', function () {
  * Performs a 'wp db export' on your local environment and gzips it
  */
 task('backup-local-db', function () {
+    // Override stage for this step
+    $stage = get('stage');
+    set('stage', 'local');
+
+    invoke('db:prepare');
     $local_db_path = get('abspath') . 'db_backups/';
     $file = get('file');
 
-    runLocally('mkdir -p "' . $local_db_path . '"');
-    runLocally('wp db export --set-gtid-purged=OFF - | gzip > "' . $local_db_path . $file . '"');
+    // Create a local folder to hold the backup if it doesn't already exist
+    if (!testLocally('[ -d ' . $local_db_path . ' ]')) {
+        runLocally('mkdir -p "' . $local_db_path . '"');
+        writeln('<info>Created ' . $local_db_path . '</info>');
+    }
+
+    writeln('Using local backup destination folder: <comment>' . $local_db_path . '</comment>');
+    writeln('Using filename: <comment>' . $file . '</comment>');
+
+    // Get a list of all WP Tables that doesn't match SearchWP.
+    // We do this to avoid SWP Token rows that result in duplicate UNIQUE keys and break the export
+    $prefix = runLocally('{{bin/wpl}} db prefix');
+    writeln("Detected WordPress table prefix: <comment>$prefix</comment>");
+    writeln('<info>Exporting MySQL Database, please wait...</info>');
+    $tables = runLocally('{{bin/wpl}} db tables --all-tables "' . $prefix . 'searchwp*" --format=csv');
+
+    // Run the export but exclude specified tables
+    runLocally(
+        '{{bin/wpl}} db export --set-gtid-purged=OFF --defaults --exclude_tables=' .
+            $tables .
+            ' --porcelain ' .
+            $local_db_path .
+            $file
+    );
+
+    // Zip it up for faster xfer speed
+    writeln('Compressing <comment>' . $file . '</comment> for a smaller filesize...');
+    runLocally('gzip "' . $local_db_path . $file . '"');
+
+    writeln('Backup completed: <info>' . $local_db_path . $file . '.gz</info>');
+
+    // Restore stage
+    set('stage', $stage);
 })->desc('Backup a copy of a local database');
 
 /**
@@ -48,16 +124,27 @@ task('db:import:remote', function () {
     $local_db_path = get('abspath') . 'db_backups/';
 
     $file = get('file');
-    run('mkdir -p "' . $remote_db_path . '"');
 
-    upload($local_db_path . $file, $remote_db_path . $file, [
-        'options' => ['flags' => '-ch']
+    // Create a remote folder to store the backup if it doesn't already exist
+    if (!test('[ -d ' . $remote_db_path . ' ]')) {
+        run('mkdir -p "' . $remote_db_path . '"');
+        writeln('<info>Created ' . $remote_db_path . '</info>');
+    }
+
+    upload($local_db_path . $file . '.gz', $remote_db_path . $file . '.gz', [
+        'options' => ['flags' => '-W']
     ]);
 
-    cd('{{release_path}}');
-    run('gzip -c -d ' . $remote_db_path . $file . ' | wp db import -');
-    invoke('db:rewrite:remote');
-    run('rm ' . $remote_db_path . $file);
+    within('{{release_path}}', function () use ($remote_db_path, $file) {
+        writeln("Decompressing <comment>$file.gz</comment>");
+        run('gzip -d "' . $remote_db_path . $file . '.gz"');
+
+        writeln('<info>Importing MySQL Database backup, please wait...</info>');
+        run('{{bin/wp}} db import --defaults --skip-optimization "' . $remote_db_path . $file . '"', ['tty' => true]);
+        invoke('db:rewrite:remote');
+    });
+
+    run('rm "' . $remote_db_path . $file . '.gz"');
 })->setPrivate();
 
 /**
@@ -70,9 +157,16 @@ task('db:import:local', function () {
     $local_db_path = get('abspath') . 'db_backups/';
     $file = get('file');
 
-    runLocally('gzip -c -d "' . $local_db_path . $file . '" | wp db import -');
+    writeln("Decompressing <comment>$file.gz</comment>");
+    runLocally('gzip -d "' . $local_db_path . $file . '.gz"');
+
+    writeln('<info>Importing MySQL Database backup, please wait...</info>');
+    runLocally('{{bin/wpl}} db import --defaults --skip-optimization "' . $local_db_path . $file . '"', [
+        'tty' => true
+    ]);
+
     invoke('db:rewrite:local');
-    runLocally("rm '" . $local_db_path . get('file') . "'");
+    runLocally('rm "' . $local_db_path . $file . '"');
 })->setPrivate();
 
 /**
@@ -82,9 +176,9 @@ task('db:import:local', function () {
  */
 task('db:prepare', function () {
     $stage = get('stage', 'local');
-    $file = $stage . '_' . date('YmdHis') . '.sql.gz';
+    $file = $stage . '_' . date('YmdHis') . '.sql';
 
-    if ($stage == 'local') {
+    if ($stage == 'local' || $stage == false) {
         $root_path = get('abspath');
     } else {
         $root_path = get('deploy_path') . '/';
@@ -116,13 +210,9 @@ task('db:reachable', function () {
         echo \"$?\"");
 
     if ($does_exist === '1') {
-        throw new Exception(
-            "Unable to locate database '{$db_name}' on '{$db_host}'"
-        );
+        throw new Exception("Unable to locate database '{$db_name}' on '{$db_host}'");
     } else {
-        writeln(
-            "<info>'$db_name'</info> found on host <info>'$db_host'</info>"
-        );
+        writeln("<info>'$db_name'</info> found on host <info>'$db_host'</info>");
     }
 })->setPrivate();
 
@@ -188,7 +278,7 @@ task('db:rewrite:local', function () {
 task('db:confirm', function () {
     // Safety net to prevent database overwriting using CI/CD
     if (get('allow_input') == false) {
-        throw new Exception("You cannot operate on databases when using non-interactive mode");
+        throw new Exception('You cannot operate on databases when using non-interactive mode');
     }
 
     $stage = get('stage');
@@ -228,35 +318,24 @@ task('db:confirm', function () {
 /**
  * Group subtasks together for the 'pull-remote-db' primary task
  */
-task('pull-remote-db', [
-    'backup-local-db',
-    'backup-remote-db',
-    'db:import:local'
-])->desc(
+task('pull-remote-db', ['backup-local-db', 'backup-remote-db', 'db:import:local'])->desc(
     'Pull down a copy of the database from the remote host and import it into your local env'
 );
 
 /**
  * Group subtasks together for the 'push-local-db' primary task
  */
-task('push-local-db', [
-    'db:confirm',
-    'backup-remote-db',
-    'backup-local-db',
-    'db:import:remote'
-])->desc(
+task('push-local-db', ['db:confirm', 'backup-remote-db', 'backup-local-db', 'db:import:remote'])->desc(
     'Push up a local copy of a database and import it into the remote host'
 );
 
 before('backup-remote-db', 'db:reachable');
 before('backup-remote-db', 'deploy:lock');
-before('backup-remote-db', 'db:prepare');
-before('backup-local-db', 'db:prepare');
+after('backup-remote-db', 'deploy:unlock');
+
 before('db:import:remote', 'deploy:lock');
 before('db:import:remote', 'db:reachable');
-
 after('db:import:remote', 'deploy:unlock');
-after('backup-remote-db', 'deploy:unlock');
 
 /**
  * Run a `wp search-replace $from $to`
@@ -270,14 +349,12 @@ function wp_search_replace($from, $to, $stage = 'local')
     writeln("<comment>$from → $to</comment>");
 
     $runas = __NAMESPACE__ . '\\' . ($stage == 'local' ? 'runLocally' : 'run');
+    $bin = $stage == 'local' ? get('bin/wpl') : get('bin/wp');
 
-    $runas(
-        "wp search-replace --report-changed-only --all-tables $from $to",
-        [
-            'tty' => get('allow_input'),
-            'timeout' => null
-        ]
-    );
+    $runas($bin . ' search-replace --report-changed-only --all-tables "' . $from . '" "' . $to . '"', [
+        'tty' => get('allow_input'),
+        'timeout' => null
+    ]);
 
     /**
      * Bug: https://github.com/Mixd/PackerWP/issues/14
@@ -285,11 +362,8 @@ function wp_search_replace($from, $to, $stage = 'local')
      */
     $from = str_replace('"', '', json_encode($from));
     $to = str_replace('"', '', json_encode($to));
-    $runas(
-        "wp search-replace --quiet --all-tables $from $to",
-        [
-            'tty' => false,
-            'timeout' => null
-        ]
-    );
+    $runas($bin . ' search-replace --quiet --all-tables "' . $from . '" "' . $to . '"', [
+        'tty' => false,
+        'timeout' => null
+    ]);
 }

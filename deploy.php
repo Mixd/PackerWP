@@ -27,9 +27,7 @@ if (file_exists(ENV_FILE) == false) {
 
     if ($json == false) {
         throw new Exception(
-            'Unable to read ' .
-                $env_path .
-                'config.json. Check your current user has permission to read the file'
+            'Unable to read ' . $env_path . 'config.json. Check your current user has permission to read the file'
         );
     }
     $json = json_decode($json, true, 12);
@@ -100,14 +98,7 @@ function searchreplaceinfile(string $file, string $before, string $after)
     $before = str_replace($seperator, '\\' . $seperator, $before);
     $after = str_replace($seperator, '\\' . $seperator, $after);
 
-    $cmd =
-        "{{bin/sed}} 's" .
-        $seperator .
-        $before .
-        $seperator .
-        $after .
-        $seperator .
-        "g' \"$file\"";
+    $cmd = "{{bin/sed}} 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
     $stage = get('stage', 'local');
     if ($stage == 'local') {
         return runLocally($cmd);
@@ -245,6 +236,11 @@ set('bin/wp', function () {
     return run("command -v 'wp' || which 'wp' || type -p 'wp'");
 });
 
+// Set WP bin to local path
+set('bin/wpl', function () {
+    return runLocally("command -v 'wp' || which 'wp' || type -p 'wp'");
+});
+
 // Detect which version of npm is being used on the target
 set('bin/npm', function () {
     if (!commandExist('npm')) {
@@ -258,9 +254,7 @@ set('bin/composer', function () {
     if (!commandExist('composer')) {
         throw new Exception("composer was not detected in your \$PATH");
     }
-    return run(
-        "command -v 'composer' || which 'composer' || type -p 'composer'"
-    );
+    return run("command -v 'composer' || which 'composer' || type -p 'composer'");
 });
 
 // Every release should be datetime stamped
@@ -298,14 +292,12 @@ fail('deploy', 'deploy:unlock');
  * Log the deployment info into a revisions file in the deployment path
  */
 task('signoff', function () {
-    $signoff =
-        'Branch ({{branch}}) deployed by ({{user}}) for release ({{release_name}})';
+    $signoff = 'Branch ({{branch}}) deployed by ({{user}}) for release ({{release_name}})';
     cd('{{deploy_path}}');
     run('touch revisions.log');
     run('echo "' . $signoff . '" >> revisions.log');
     writeln('<info>' . $signoff . '</info>');
 })->setPrivate();
-
 
 /**
  * Helpful debug task
@@ -314,24 +306,37 @@ task('debug:info', function () {
     writeln('Current user: <info>' . get('user') . '</info>');
     writeln('Current branch: <info>' . get('branch') . '</info>');
     writeln('Supports TTY: <info>' . (get('allow_input') ? 'Yes' : 'No') . '</info>');
-    writeln('Binaries:
-        <comment>wp</comment>: ' . get('bin/wp') . '
-        <comment>curl</comment>: ' . get('bin/curl') . '
-        <comment>npm</comment>: ' . get('bin/npm') . '
-        <comment>sed</comment>: ' . get('bin/sed') . '
-        <comment>composer</comment>: ' . get('bin/composer') . '
-        <comment>php</comment>: ' . get('bin/php') . '
-        <comment>git</comment>: ' . get('bin/git') . '
-        <comment>symlink</comment>: ' . get('bin/symlink')
+    writeln(
+        'Binaries:
+        <comment>wp</comment>: ' .
+            get('bin/wp') .
+            '
+        <comment>curl</comment>: ' .
+            get('bin/curl') .
+            '
+        <comment>npm</comment>: ' .
+            get('bin/npm') .
+            '
+        <comment>sed</comment>: ' .
+            get('bin/sed') .
+            '
+        <comment>composer</comment>: ' .
+            get('bin/composer') .
+            '
+        <comment>php</comment>: ' .
+            get('bin/php') .
+            '
+        <comment>git</comment>: ' .
+            get('bin/git') .
+            '
+        <comment>symlink</comment>: ' .
+            get('bin/symlink')
     );
 });
 
 after('cleanup', 'signoff');
 
-$autoload = array_diff(
-    scandir(realpath(__DIR__) . '/config/tasks/', SCANDIR_SORT_ASCENDING),
-    ['..', '.', '.DS_Store']
-);
+$autoload = array_diff(scandir(realpath(__DIR__) . '/config/tasks/', SCANDIR_SORT_ASCENDING), ['..', '.', '.DS_Store']);
 if (!empty($autoload)) {
     array_map(function ($task) {
         require_once realpath(__DIR__) . '/config/tasks/' . $task;
