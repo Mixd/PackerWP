@@ -7,20 +7,19 @@
 /**
  * Define some immutable paths
  */
-define('WP_HOME', '!!site_url!!');
-define('WP_SITEURL', '!!site_url!!/wordpress');
-define('WP_CONTENT_URL', '!!site_url!!/content');
+define('WP_HOME', '');
+define('WP_SITEURL', '');
+define('WP_CONTENT_URL', '');
 define(
     'WP_CONTENT_DIR',
     str_replace('wordpress', '', realpath($_SERVER['DOCUMENT_ROOT'])) .
         '/content'
 );
-define('WP_DEBUG', !!debug!!);
 
 /**
  * Define the environment type
  */
-define('WP_ENVIRONMENT_TYPE', '!!stage!!');
+define('WP_ENVIRONMENT_TYPE', '');
 
 /**
  * Force SSL for wp-admin if not on a *.local domain

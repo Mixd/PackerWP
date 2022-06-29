@@ -33,7 +33,16 @@ task('backup-remote-db', function () {
         $prefix = run('{{bin/wp}} db prefix');
         writeln("Detected WordPress table prefix: <comment>$prefix</comment>");
         writeln('<info>Exporting MySQL Database, please wait...</info>');
-        $tables = run('{{bin/wp}} db tables --all-tables "' . $prefix . 'searchwp*" --format=csv');
+
+        // Test for searchwp tables
+        $cmd = '{{bin/wp}} db tables --all-tables "' . $prefix . 'searchwp*" --format=csv';
+
+        if (test($cmd . ' &>/dev/null')) {
+            $tables = run($cmd);
+            writeln('Excluding tables: <comment>' . $tables . '</comment>');
+        } else {
+            $tables = '';
+        }
 
         // Run the export but exclude specified tables
         run(
@@ -46,7 +55,7 @@ task('backup-remote-db', function () {
 
         // Zip it up for faster xfer speed
         writeln('Compressing <comment>' . $file . '</comment> for a faster download...');
-        run('gzip "' . $remote_db_path . $file . '"');
+        run('gzip -f "' . $remote_db_path . $file . '"');
     });
 
     // Create a local folder to hold the backup if it doesn't already exist
@@ -92,7 +101,16 @@ task('backup-local-db', function () {
     $prefix = runLocally('{{bin/wpl}} db prefix');
     writeln("Detected WordPress table prefix: <comment>$prefix</comment>");
     writeln('<info>Exporting MySQL Database, please wait...</info>');
-    $tables = runLocally('{{bin/wpl}} db tables --all-tables "' . $prefix . 'searchwp*" --format=csv');
+
+    // Test for searchwp tables
+    $cmd = '{{bin/wpl}} db tables --all-tables "' . $prefix . 'searchwp*" --format=csv';
+
+    if (testLocally($cmd . ' &>/dev/null')) {
+        $tables = runLocally($cmd);
+        writeln('Excluding tables: <comment>' . $tables . '</comment>');
+    } else {
+        $tables = '';
+    }
 
     // Run the export but exclude specified tables
     runLocally(
@@ -105,7 +123,7 @@ task('backup-local-db', function () {
 
     // Zip it up for faster xfer speed
     writeln('Compressing <comment>' . $file . '</comment> for a smaller filesize...');
-    runLocally('gzip "' . $local_db_path . $file . '"');
+    runLocally('gzip -f "' . $local_db_path . $file . '"');
 
     writeln('Backup completed: <info>' . $local_db_path . $file . '.gz</info>');
 
@@ -120,10 +138,15 @@ task('backup-local-db', function () {
  * then performs a search and replace using 'wp search-replace'
  */
 task('db:import:remote', function () {
+    invoke('db:prepare');
+    $stage = get('stage');
     $remote_db_path = get('folder');
     $local_db_path = get('abspath') . 'db_backups/';
 
     $file = get('file');
+
+    // Need to force this to local_ instead of the default <stage>_
+    $file = str_replace($stage, 'local', $file);
 
     // Create a remote folder to store the backup if it doesn't already exist
     if (!test('[ -d ' . $remote_db_path . ' ]')) {
@@ -131,20 +154,22 @@ task('db:import:remote', function () {
         writeln('<info>Created ' . $remote_db_path . '</info>');
     }
 
+    writeln('<info>Uploading ' . $file . '.gz, please wait...</info>');
+
     upload($local_db_path . $file . '.gz', $remote_db_path . $file . '.gz', [
         'options' => ['flags' => '-W']
     ]);
 
     within('{{release_path}}', function () use ($remote_db_path, $file) {
         writeln("Decompressing <comment>$file.gz</comment>");
-        run('gzip -d "' . $remote_db_path . $file . '.gz"');
+        run('gzip -df "' . $remote_db_path . $file . '.gz"');
 
         writeln('<info>Importing MySQL Database backup, please wait...</info>');
         run('{{bin/wp}} db import --defaults --skip-optimization "' . $remote_db_path . $file . '"', ['tty' => true]);
         invoke('db:rewrite:remote');
     });
 
-    run('rm "' . $remote_db_path . $file . '.gz"');
+    run('rm "' . $remote_db_path . $file . '"');
 })->setPrivate();
 
 /**
@@ -158,7 +183,7 @@ task('db:import:local', function () {
     $file = get('file');
 
     writeln("Decompressing <comment>$file.gz</comment>");
-    runLocally('gzip -d "' . $local_db_path . $file . '.gz"');
+    runLocally('gzip -df "' . $local_db_path . $file . '.gz"');
 
     writeln('<info>Importing MySQL Database backup, please wait...</info>');
     runLocally('{{bin/wpl}} db import --defaults --skip-optimization "' . $local_db_path . $file . '"', [
@@ -176,7 +201,7 @@ task('db:import:local', function () {
  */
 task('db:prepare', function () {
     $stage = get('stage', 'local');
-    $file = $stage . '_' . date('YmdHis') . '.sql';
+    $file = $stage . '_' . date('Ymd') . '.sql';
 
     if ($stage == 'local' || $stage == false) {
         $root_path = get('abspath');

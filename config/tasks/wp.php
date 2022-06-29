@@ -13,10 +13,8 @@ task('setup:wp:check', function () {
     if (test('[ -d {{deploy_path}}/current ]')) {
         within('{{release_path}}', function () {
             $stage = get('stage');
-            if (
-                test('{{bin/wp}} core is-installed') or
-                test('{{bin/wp}} core is-installed --network')
-            ) {
+
+            if (test('{{bin/wp}} core is-installed') or test('{{bin/wp}} core is-installed --network')) {
                 throw new Exception(
                     "WordPress is already installed.\nRun 'dep reset $stage' to reset your installation"
                 );
@@ -40,32 +38,12 @@ task('setup:wp:remote', function () {
     $wp_email = $config['wp_email'];
     $domain = $params['wp_home_url'];
 
-    within('{{release_path}}', function () use (
-        $params,
-        $config,
-        $wp_user,
-        $wp_pwd,
-        $wp_email,
-        $domain
-    ) {
+    within('{{release_path}}', function () use ($params, $config, $wp_user, $wp_pwd, $wp_email, $domain) {
         // Create a wp-config.php
-        wp_config_create(
-            $domain,
-            $params['db_name'],
-            $params['db_user'],
-            $params['db_password'],
-            $params['db_host']
-        );
+        wp_config_create($domain, $params['db_name'], $params['db_user'], $params['db_password'], $params['db_host']);
 
         // Run the install
-        wp_core_install(
-            $config['is_multisite'],
-            $domain,
-            $config['wp_sitename'],
-            $wp_user,
-            $wp_pwd,
-            $wp_email
-        );
+        wp_core_install($config['is_multisite'], $domain, $config['wp_sitename'], $wp_user, $wp_pwd, $wp_email);
 
         // Run the cleanup
         wp_after_install($domain);
@@ -81,13 +59,8 @@ task('setup:wp:remote', function () {
  * Install WordPress on a local environment
  */
 task('setup-local-wp', function () {
-    if (
-        test('{{bin/wp}} core is-installed') or
-        test('{{bin/wp}} core is-installed --network')
-    ) {
-        throw new Exception(
-            "WordPress is already installed.\nRun 'dep reset' to reset your installation"
-        );
+    if (test('{{bin/wpl}} core is-installed') or test('{{bin/wpl}} core is-installed --network')) {
+        throw new Exception("WordPress is already installed.\nRun 'dep reset' to reset your installation");
     }
 
     $wp_config = getconfig();
@@ -110,14 +83,7 @@ task('setup-local-wp', function () {
     );
 
     // Run the install
-    wp_core_install(
-        $wp_config['is_multisite'],
-        $domain,
-        $wp_config['wp_sitename'],
-        $wp_user,
-        $wp_pwd,
-        $wp_email
-    );
+    wp_core_install($wp_config['is_multisite'], $domain, $wp_config['wp_sitename'], $wp_user, $wp_pwd, $wp_email);
 
     // Run the cleanup
     wp_after_install($domain);
@@ -135,9 +101,7 @@ task('setup-local-wp', function () {
  */
 task('copy:templates', function () {
     $files = get('templates');
-
     $stage = get('stage', 'local');
-
     $root = $stage == 'local' ? '.' : get('release_path');
 
     if (!empty($files)) {
@@ -182,15 +146,20 @@ task('reset-admin-pwd', function () {
         exit();
     }
 
+    $bin = $stage == 'local' ? '{{bin/wpl}}' : '{{bin/wp}}';
+
     $update_cmd =
-        '
-        {{bin/wp}} user update "' .
+        $bin .
+        ' user update "' .
         $wp_user .
         '" --skip-email --user_pass="' .
         $wp_pwd .
         '" && \
-        {{bin/wp}} config shuffle-salts
+       ' .
+        $bin .
+        ' config shuffle-salts
     ';
+
     if ($stage == 'local') {
         runLocally($update_cmd);
     } else {
@@ -219,7 +188,7 @@ task('pull', ['pull-remote-db', 'pull-remote-uploads'])->desc(
  */
 task('reset', function () {
     if (get('allow_input') == false) {
-        throw new Exception("You cannot reset an installation using non-interactive mode");
+        throw new Exception('You cannot reset an installation using non-interactive mode');
     }
 
     $wp_config = getconfig();
@@ -246,28 +215,26 @@ task('reset', function () {
 
     $confirm = askConfirmation(
         "
-    Are you sure you wish to reset $domain?",
+ Are you sure you wish to reset $domain?",
         false
     );
+
     if ($confirm == true) {
-        $cmd = '{{bin/wp}} db reset --yes';
+        $bin = $stage == 'local' ? '{{bin/wpl}}' : '{{bin/wp}}';
+        $cmd = $bin . ' db reset --yes';
+
         if ($stage == 'local') {
-            if (
-                test('{{bin/wp}} core is-installed') or
-                test('{{bin/wp}} core is-installed --network')
-            ) {
+            if (test($bin . ' core is-installed') or test($bin . ' core is-installed --network')) {
                 runLocally($cmd);
             }
         } else {
             if (test('[ -d {{current_path}} ]')) {
                 within('{{current_path}}', function () use ($cmd) {
-                    if (
-                        test('{{bin/wp}} core is-installed') or
-                        test('{{bin/wp}} core is-installed --network')
-                    ) {
+                    if (test($bin . ' core is-installed') or test($bin . ' core is-installed --network')) {
                         run($cmd);
                     }
                 });
+
                 run('rm -rfv {{current_path}}', ['tty' => get('allow_input')]);
                 run('rm -rfv {{deploy_path}}/current', ['tty' => get('allow_input')]);
             }
@@ -295,14 +262,7 @@ function wp_config_create(
     string $locale = 'en_GB'
 ) {
     $stage = get('stage', 'local');
-    if ($stage == 'local') {
-        $project_root = get('abspath');
-        $config_root = realpath(dirname(__DIR__));
-    } else {
-        $project_root = get('release_path') . '/';
-        $config_root = $project_root . 'vendor/mixd/packerwp/config';
-    }
-
+    $project_root = $stage == 'local' ? get('abspath') : get('release_path') . '/';
     $env_config = getenvbag($stage);
 
     writeln('');
@@ -319,31 +279,66 @@ function wp_config_create(
     --skip-check \
     --force";
 
-    $extras = $config_root . '/templates/extras.php';
+    $config_root = $project_root . 'vendor/mixd/packerwp/config';
+
+    writeln('Searching for: ' . $project_root . 'templates/extras.php');
+    writeln('Searching for: ' . $config_root . '/templates/extras.php');
 
     if ($stage == 'local') {
-        $extras_exists = testLocally("[ -f $extras ]");
+        if (testLocally('[ -f ' . $project_root . 'templates/extras.php ]')) {
+            $use_extras = true;
+            $extras = $project_root . 'templates/extras.php';
+        } elseif (testLocally('[ -f ' . $config_root . '/templates/extras.php ]')) {
+            $use_extras = true;
+            $extras = $config_root . '/templates/extras.php';
+        } else {
+            writeln('No wp-config extras template found. Continuing...');
+        }
     } else {
-        $extras_exists = test("[ -f $extras ]");
+        if (test('[ -f ' . $project_root . 'templates/extras.php ]')) {
+            $use_extras = true;
+            $extras = $project_root . 'templates/extras.php';
+        } elseif (test('[ -f ' . $config_root . '/templates/extras.php ]')) {
+            $use_extras = true;
+            $extras = $config_root . '/templates/extras.php';
+        } else {
+            writeln('No wp-config extras template found. Continuing...');
+        }
     }
 
-    if ($extras_exists) {
+    if ($use_extras) {
+        writeln('Using extras file: <info>' . $extras . '</info>');
+
         $cmd =
             "tail -n+2 '$extras' | " .
             ($cmd .= ' \
         --extra-php');
     }
 
-    $result = run($cmd, ['tty' => get('allow_input')]);
+    // Create the wp-config.php
+    if ($stage == 'local') {
+        $result = runLocally($cmd, ['tty' => get('allow_input')]);
+    } else {
+        $result = run($cmd, ['tty' => get('allow_input')]);
+    }
 
-    // Run a search-replace with the necessary values
-    searchreplaceinfile($path_to_generated_wpconfig, '!!site_url!!', $domain);
-    searchreplaceinfile(
-        $path_to_generated_wpconfig,
-        '!!debug!!',
-        $env_config['wp_debug'] ?? 'false'
-    );
-    searchreplaceinfile($path_to_generated_wpconfig, '!!stage!!', $stage);
+    // Cast a /true/ or /false/ to a writeable value (numeric)
+    $debug = (int) ($env_config['wp_debug'] ?? 0);
+
+    // Set constants
+    if ($stage == 'local') {
+        $result = run('{{bin/wpl}} config set WP_HOME "' . $domain . '"');
+        $result = run('{{bin/wpl}} config set WP_SITEURL "' . $domain . '/wordpress"');
+        $result = run('{{bin/wpl}} config set WP_CONTENT_URL "' . $domain . '/content"');
+        $result = run('{{bin/wpl}} config set WP_DEBUG ' . $debug . ' --raw');
+        $result = run('{{bin/wpl}} config set WP_ENVIRONMENT_TYPE "' . $stage . '"');
+    } else {
+        $result = run('{{bin/wp}} config set WP_HOME "' . $domain . '"');
+        $result = run('{{bin/wp}} config set WP_SITEURL "' . $domain . '/wordpress"');
+        $result = run('{{bin/wp}} config set WP_CONTENT_URL "' . $domain . '/content"');
+        $result = run('{{bin/wp}} config set WP_DEBUG ' . $debug . ' --raw');
+        $result = run('{{bin/wp}} config set WP_ENVIRONMENT_TYPE "' . $stage . '"');
+    }
 
     return $result;
 }
@@ -436,12 +431,8 @@ function wp_after_install(string $domain)
  * @param string $domain WordPress Site URL
  * @return void
  */
-function wp_print_finish(
-    string $wp_user,
-    string $wp_pwd,
-    string $wp_email = '',
-    string $domain = ''
-) {
+function wp_print_finish(string $wp_user, string $wp_pwd, string $wp_email = '', string $domain = '')
+{
     $txt = "
 <comment>Here are your login details:</comment>
     Username:       <info>$wp_user</info>
