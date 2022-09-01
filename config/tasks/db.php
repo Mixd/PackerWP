@@ -170,7 +170,7 @@ task('db:import:remote', function () {
     });
 
     run('rm "' . $remote_db_path . $file . '"');
-})->setPrivate();
+})->hidden();
 
 /**
  * Import Database (local)
@@ -192,7 +192,7 @@ task('db:import:local', function () {
 
     invoke('db:rewrite:local');
     runLocally('rm "' . $local_db_path . $file . '"');
-})->setPrivate();
+})->hidden();
 
 /**
  * Database preflight check
@@ -213,7 +213,7 @@ task('db:prepare', function () {
 
     set('file', $file);
     set('folder', $folder);
-})->setPrivate();
+})->hidden();
 
 /**
  * Database viability check
@@ -239,7 +239,7 @@ task('db:reachable', function () {
     } else {
         writeln("<info>'$db_name'</info> found on host <info>'$db_host'</info>");
     }
-})->setPrivate();
+})->hidden();
 
 /**
  * Database Rewrite (remote)
@@ -265,7 +265,7 @@ task('db:rewrite:remote', function () {
             wp_search_replace($from, $to, $stage);
         }
     }
-})->setPrivate();
+})->hidden();
 
 /**
  * Database Rewrite (local)
@@ -291,7 +291,7 @@ task('db:rewrite:local', function () {
             wp_search_replace($from, $to, 'local');
         }
     }
-})->setPrivate();
+})->hidden();
 
 /**
  * Database confirmation
@@ -338,7 +338,7 @@ task('db:confirm', function () {
         ");
         exit();
     }
-})->setPrivate();
+})->hidden();
 
 /**
  * Group subtasks together for the 'pull-remote-db' primary task

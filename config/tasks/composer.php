@@ -29,6 +29,6 @@ task('composer:install', function () {
             'tty' => get('allow_input')
         ]);
     }
-})->setPrivate();
+})->hidden();
 
 after('deploy:update_code', 'composer:install');

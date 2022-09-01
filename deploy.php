@@ -4,16 +4,14 @@ namespace Deployer;
 
 use Exception;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Dependencies
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * Dependencies
+ */
 require 'recipe/common.php';
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Environments
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * Environments
+ */
 define('ENV_PATH', realpath(getcwd()) . '/');
 define('ENV_FILE', ENV_PATH . 'deploy.json');
 
@@ -80,9 +78,9 @@ if (file_exists(ENV_FILE) == false) {
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Misc. Helper Functions
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Misc helper functions
+ */
 
 /**
  * Searches $file for $before and replaces it with $after
@@ -297,7 +295,7 @@ task('signoff', function () {
     run('touch revisions.log');
     run('echo "' . $signoff . '" >> revisions.log');
     writeln('<info>' . $signoff . '</info>');
-})->setPrivate();
+})->hidden();
 
 /**
  * Helpful debug task
@@ -337,6 +335,7 @@ task('debug:info', function () {
 after('cleanup', 'signoff');
 
 $autoload = array_diff(scandir(realpath(__DIR__) . '/config/tasks/', SCANDIR_SORT_ASCENDING), ['..', '.', '.DS_Store']);
+
 if (!empty($autoload)) {
     array_map(function ($task) {
         require_once realpath(__DIR__) . '/config/tasks/' . $task;
@@ -347,13 +346,13 @@ if (!empty($autoload)) {
 //// Hide uncommon tasks from the CLI
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-task('deploy:clear_paths')->setPrivate();
-task('deploy:copy_dirs')->setPrivate();
-task('deploy:prepare')->setPrivate();
-task('deploy:release')->setPrivate();
-task('deploy:shared')->setPrivate();
-task('deploy:symlink')->setPrivate();
-task('deploy:update_code')->setPrivate();
-task('deploy:vendors')->setPrivate();
-task('deploy:writable')->setPrivate();
-task('cleanup')->setPrivate();
+task('deploy:clear_paths')->hidden();
+task('deploy:copy_dirs')->hidden();
+task('deploy:prepare')->hidden();
+task('deploy:release')->hidden();
+task('deploy:shared')->hidden();
+task('deploy:symlink')->hidden();
+task('deploy:update_code')->hidden();
+task('deploy:vendors')->hidden();
+task('deploy:writable')->hidden();
+task('cleanup')->hidden();

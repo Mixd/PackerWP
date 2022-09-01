@@ -70,6 +70,6 @@ task('deploy:heartbeat', function () {
         invoke('deploy:unlock');
         exit();
     }
-})->setPrivate();
+})->hidden();
 
 after('deploy:symlink', 'deploy:heartbeat');

@@ -21,7 +21,7 @@ task('setup:wp:check', function () {
             }
         });
     }
-})->setPrivate();
+})->hidden();
 
 /**
  * Setup WordPress (remote)
@@ -51,7 +51,7 @@ task('setup:wp:remote', function () {
 
     // Print results
     wp_print_finish($wp_user, $wp_pwd, $wp_email, $domain);
-})->setPrivate();
+})->hidden();
 
 /**
  * Setup WordPress (local)
