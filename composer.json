@@ -13,12 +13,9 @@
     "support": {
         "issues": "https://github.com/Mixd/PackerWP/issues"
     },
-    "suggest": {
-        "johnpbloch/wordpress": "Allows you to install WordPress using Composer",
-        "deployer/deployer": "Deployer binary to make use of the 'dep' commands"
-    },
     "license": "GPL-3.0-or-later",
     "require": {
-        "php": ">=7.3"
+        "php": ">=7.3",
+        "deployer/deployer": "^7.0"
     }
 }
