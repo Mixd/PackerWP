@@ -39,6 +39,12 @@ To get started, you'll need to install PackerWP into your project using composer
 $ composer require mixd/packerwp
 ```
 
+In order to use the custom tasks created by Mixd you will need to create a symbolic link which will reference the deploy.php file within the mixd/packerwp composer package. This can done by running the following command at the root of the project.
+
+```
+ln -s vendor/mixd/packerwp/deploy.php
+```
+
 With PackerWP now installed, you should make sure you have the Deployer binary installed to your local system to make it easier
 to run commands.
 
