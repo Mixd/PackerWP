@@ -1,70 +1,84 @@
 <?php
 
-namespace Deployer;
+namespace Mixd\Packer;
 
 use Exception;
 
-/**
- * Dependencies
- */
+use function Deployer\{
+    set,
+    get,
+    localhost,
+    host,
+    runLocally,
+    run,
+    commandExist,
+    task,
+    writeln,
+    after,
+    cd,
+    fail
+};
+
+use function Mixd\Packer\config_parser;
+
 require 'recipe/common.php';
 
-/**
- * Environments
- */
-define('ENV_PATH', realpath(getcwd()) . '/');
-define('ENV_FILE', ENV_PATH . 'deploy.json');
-
 // Define the project root
-set('abspath', ENV_PATH);
+set('abspath', realpath(getcwd()) . '/');
 
-if (file_exists(ENV_FILE) == false) {
-    throw new Exception('Unable to find configuration file at ' . ENV_FILE);
-} else {
-    $json = file_get_contents(ENV_FILE);
+$config = config_parser(realpath(getcwd()) . '/deploy.json');
 
-    if ($json == false) {
-        throw new Exception(
-            'Unable to read ' . $env_path . 'config.json. Check your current user has permission to read the file'
-        );
-    }
-    $json = json_decode($json, true, 12);
+/**
+ * Exit early if there is a problem with the config file. This could either be that it doesnt exist 
+ * or the JSON is not valid. Check your Config JSON against the example for a correct schema.
+ */
+if (!$config) {
+    throw new Exception('Unable to parse configuration file, does it exist and is it valid JSON?');
+}
 
-    // register the repo
-    set('repository', $json['git_repo']);
+set('config', $config);
+set('repository', $config['git_repo']);
+set('application', $config['wp_sitename']);
+set('local_url', $config['wp_home_url']);
 
-    set('config', $json);
+// These are new Vars that need rolling out to whole codebase
+set('wp_user', $config['wp_user']);
+set('wp_email', $config['wp_email']);
+set('is_multisite', $config['is_multisite']);
+set('rewrite', $config['rewrite']);
+set('environments', $config['environments']);
 
-    // Collect the WordPress config
-    $wp_json = $json['wordpress'];
+$env_array = get('environments');
 
-    // Collect the environment config
-    $env_json = $json['environments'];
+/**
+ * Get the LOCAL configuration values from the config json.
+ */
+if ($env_array and isset($env_array['local'])) {
+    $local_json = $env_array['local'];
 
-    // Set the name
-    set('application', $wp_json['wp_sitename']);
+    $host = localhost();
+    $host->hostname('localhost');
+    $host->set('local', true);
+}
 
-    // register the local wp url
-    set('local_url', $wp_json['wp_home_url']);
-
-    // Register hosts and associated metadata
-    if (!empty($env_json)) {
-        if (isset($env_json['local'])) {
-            $local_json = $env_json['local'];
-
-            $host = localhost();
-            $host->hostname('localhost');
-            $host->set('local', true);
-
-            unset($env_json['local']);
-        }
-
-        foreach ($env_json as $env => $env_config) {
-            $host = host($env);
-
-            $host->set('stage', $env);
+/**
+ * Setup environmental configuration
+ * 
+ * Loops through each environmental configuration and sets the correct variables within Deployer
+ */
+if ($env_array and is_array($env_array)) {
+    foreach ($env_array as $env_name => $env_config) {
+        if ($env_name !== 'local') {
+            $host = host($env_name);
+            $host->set('stage', $env_name);
+            // Forward Agent tells Deployer to attempt the deploy using the users stored local SSH credentials
             $host->set('forwardAgent', true);
 
+            /**
+             * Loop through each environmental configuration and set some values.
+             * 
+             * Note: hostname and user have their own methods
+             */
             foreach ($env_config as $key => $value) {
                 if ($key == 'hostname') {
                     $host->hostname($value);
@@ -76,56 +90,6 @@ if (file_exists(ENV_FILE) == false) {
             }
         }
     }
-}
-
-/**
- * Misc helper functions
- */
-
-/**
- * Searches $file for $before and replaces it with $after
- *
- * @param string $file
- * @param string $before
- * @param string $after
- * @return bool
- */
-function searchreplaceinfile(string $file, string $before, string $after)
-{
-    $seperator = '/';
-    $before = str_replace($seperator, '\\' . $seperator, $before);
-    $after = str_replace($seperator, '\\' . $seperator, $after);
-
-    $cmd = "{{bin/sed}} 's" . $seperator . $before . $seperator . $after . $seperator . "g' \"$file\"";
-    $stage = get('stage', 'local');
-    if ($stage == 'local') {
-        return runLocally($cmd);
-    } else {
-        return run($cmd);
-    }
-}
-
-/**
- * Get an array of environment vars
- *
- * @param string $stage
- * @return array
- */
-function getenvbag(string $stage)
-{
-    $config = get('config');
-    return $config['environments'][$stage];
-}
-
-/**
- * Get an array of default configuration options
- *
- * @return array
- */
-function getconfig()
-{
-    $config = get('config');
-    return $config['wordpress'];
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -196,6 +160,7 @@ set('http_user', function () {
     }
     return 'nobody';
 });
+
 set('http_group', function () {
     if ($webgroup = run("cat /etc/apache2/envvars | grep 'APACHE_RUN_GROUP'")) {
         $www = explode('=', $webgroup);
@@ -306,29 +271,14 @@ task('debug:info', function () {
     writeln('Supports TTY: <info>' . (get('allow_input') ? 'Yes' : 'No') . '</info>');
     writeln(
         'Binaries:
-        <comment>wp</comment>: ' .
-            get('bin/wp') .
-            '
-        <comment>curl</comment>: ' .
-            get('bin/curl') .
-            '
-        <comment>npm</comment>: ' .
-            get('bin/npm') .
-            '
-        <comment>sed</comment>: ' .
-            get('bin/sed') .
-            '
-        <comment>composer</comment>: ' .
-            get('bin/composer') .
-            '
-        <comment>php</comment>: ' .
-            get('bin/php') .
-            '
-        <comment>git</comment>: ' .
-            get('bin/git') .
-            '
-        <comment>symlink</comment>: ' .
-            get('bin/symlink')
+         <comment>wp</comment>: ' . get('bin/wp') .
+            '<comment>curl</comment>: ' . get('bin/curl') .
+            '<comment>npm</comment>: ' . get('bin/npm') .
+            '<comment>sed</comment>: ' . get('bin/sed') .
+            '<comment>composer</comment>: ' . get('bin/composer') .
+            '<comment>php</comment>: ' . get('bin/php') .
+            '<comment>git</comment>: ' . get('bin/git') .
+            '<comment>symlink</comment>: ' . get('bin/symlink')
     );
 });
 

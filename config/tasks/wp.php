@@ -29,9 +29,9 @@ task('setup:wp:check', function () {
  * Install WordPress on a remote environment
  */
 task('setup:wp:remote', function () {
-    $config = getconfig();
+    $config = get_config();
     $stage = get('stage', 'local');
-    $params = getenvbag($stage);
+    $params = get_env_vars($stage);
 
     $wp_user = $config['wp_user'];
     $wp_pwd = wp_password_create();
@@ -63,9 +63,9 @@ task('setup-local-wp', function () {
         throw new Exception("WordPress is already installed.\nRun 'dep reset' to reset your installation");
     }
 
-    $wp_config = getconfig();
+    $wp_config = get_config();
     $stage = get('stage', 'local');
-    $env_config = getenvbag($stage);
+    $env_config = get_env_vars($stage);
 
     $domain = $wp_config['wp_home_url'];
     $wp_user = $wp_config['wp_user'];
@@ -119,7 +119,7 @@ task('copy:templates', function () {
  * Reset the WordPress Administrator password and shuffles the WordPress salts
  */
 task('reset-admin-pwd', function () {
-    $config = getconfig();
+    $config = get_config();
     $wp_user = $config['wp_user'];
 
     $wp_pwd = wp_password_create();
@@ -191,9 +191,9 @@ task('reset', function () {
         throw new Exception('You cannot reset an installation using non-interactive mode');
     }
 
-    $wp_config = getconfig();
+    $wp_config = get_config();
     $stage = get('stage', 'local');
-    $env_config = getenvbag($stage);
+    $env_config = get_env_vars($stage);
 
     if ($stage == 'local') {
         $domain = $wp_config['wp_home_url'];
@@ -263,7 +263,7 @@ function wp_config_create(
 ) {
     $stage = get('stage', 'local');
     $project_root = $stage == 'local' ? get('abspath') : get('release_path') . '/';
-    $env_config = getenvbag($stage);
+    $env_config = get_env_vars($stage);
 
     writeln('');
     writeln('<comment>Creating wp-config.php</comment>');

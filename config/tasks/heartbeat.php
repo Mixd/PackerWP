@@ -9,7 +9,7 @@ namespace Deployer;
  */
 task('deploy:heartbeat', function () {
     $stage = get('stage', 'local');
-    $params = getenvbag($stage);
+    $params = get_env_vars($stage);
     $domain = $params['wp_home_url'];
 
     $response = run(

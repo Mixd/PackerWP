@@ -222,7 +222,7 @@ task('db:prepare', function () {
  */
 task('db:reachable', function () {
     $stage = get('stage', 'local');
-    $params = getenvbag($stage);
+    $params = get_env_vars($stage);
 
     $db_host = $params['db_host'];
     $db_name = $params['db_name'];
@@ -248,8 +248,8 @@ task('db:reachable', function () {
  */
 task('db:rewrite:remote', function () {
     $stage = get('stage');
-    $wp_config = getconfig();
-    $env_config = getenvbag($stage);
+    $wp_config = get_config();
+    $env_config = get_env_vars($stage);
 
     $from = $wp_config['wp_home_url'];
     $to = $env_config['wp_home_url'];
@@ -274,8 +274,8 @@ task('db:rewrite:remote', function () {
  */
 task('db:rewrite:local', function () {
     $stage = get('stage');
-    $wp_config = getconfig();
-    $env_config = getenvbag($stage);
+    $wp_config = get_config();
+    $env_config = get_env_vars($stage);
 
     $from = $env_config['wp_home_url'];
     $to = $wp_config['wp_home_url'];
@@ -307,7 +307,7 @@ task('db:confirm', function () {
     }
 
     $stage = get('stage');
-    $params = getenvbag($stage);
+    $params = get_env_vars($stage);
     $db_name = $params['db_name'];
 
     write(
