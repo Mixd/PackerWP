@@ -26,6 +26,7 @@ require 'recipe/common.php';
 // Define the project root
 set('abspath', realpath(getcwd()) . '/');
 
+// Load in the deploy.json file
 $config = config_parser(realpath(getcwd()) . '/deploy.json');
 
 /**
@@ -51,7 +52,7 @@ set('environments', $config['environments']);
 $env_array = get('environments');
 
 /**
- * Get the LOCAL configuration values from the config json.
+ * Get the Local configuration values from the config json.
  */
 if ($env_array and isset($env_array['local'])) {
     $local_json = $env_array['local'];
@@ -92,9 +93,12 @@ if ($env_array and is_array($env_array)) {
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Below be dragons - tread carefully!
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Define and setup the configuration vars for the local and remote environments.
+ * 
+ * Please note that changing values her can have unexpected consequences and must be tested
+ */
+
 
 // Detect the current operator
 set('user', function () {
@@ -108,19 +112,26 @@ set('user', function () {
 // Can a user interactive with the TTY?
 set('allow_input', function () {
     $user = get('user');
+    // Do not allow interaction for when used with CI/CD
     if ($user != 'runner') {
-        // Do not allow interaction for when used with CI/CD
         return true;
-    } else {
-        return false;
     }
+
+    return false;
 });
 
 // Define a list of files that should be shared between deployments
-set('shared_files', ['wp-config.php', '.htaccess', 'robots.txt']);
+set('shared_files', [
+    'wp-config.php',
+    '.htaccess',
+    'robots.txt'
+]);
 
 // Define a list of files that should be copied from the 'templates' folder to the root
-set('templates', ['.htaccess', 'robots.txt']);
+set('templates', [
+    '.htaccess',
+    'robots.txt'
+]);
 
 // Should a TTY be opened for Git?
 set('git_tty', get('allow_input'));
@@ -130,6 +141,7 @@ set('shared_dir', function () {
     if (get('stage', 'local') == 'local') {
         return get('abspath');
     }
+
     return get('deploy_path') . '/shared/';
 });
 
@@ -158,6 +170,7 @@ set('http_user', function () {
         $www = explode('=', $webuser);
         return end($www);
     }
+
     return 'nobody';
 });
 
@@ -166,6 +179,7 @@ set('http_group', function () {
         $www = explode('=', $webgroup);
         return end($www);
     }
+
     return 'nobody';
 });
 
@@ -174,8 +188,10 @@ set('bin/sed', function () {
     if (!commandExist('sed')) {
         throw new Exception("sed was not detected in your \$PATH");
     }
+
     $sed = run("command -v 'sed' || which 'sed' || type -p 'sed'");
     $which_sed = run($sed . ' --version | head -n 1');
+
     if (strstr($which_sed, 'GNU sed')) {
         return "$sed -i";
     } else {
@@ -188,6 +204,7 @@ set('bin/curl', function () {
     if (!commandExist('curl')) {
         throw new Exception("curl was not detected in your \$PATH");
     }
+
     return run("command -v 'curl' || which 'curl' || type -p 'curl'");
 });
 
@@ -196,6 +213,7 @@ set('bin/wp', function () {
     if (!commandExist('wp')) {
         throw new Exception("wp-cli was not detected in your \$PATH");
     }
+
     return run("command -v 'wp' || which 'wp' || type -p 'wp'");
 });
 
@@ -209,6 +227,7 @@ set('bin/npm', function () {
     if (!commandExist('npm')) {
         throw new Exception("npm was not detected in your \$PATH");
     }
+
     return run("command -v 'npm' || which 'npm' || type -p 'npm'");
 });
 
@@ -217,6 +236,7 @@ set('bin/composer', function () {
     if (!commandExist('composer')) {
         throw new Exception("composer was not detected in your \$PATH");
     }
+
     return run("command -v 'composer' || which 'composer' || type -p 'composer'");
 });
 
