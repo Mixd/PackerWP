@@ -24,40 +24,36 @@ task('deploy:heartbeat', function () {
         strpos($status_code, '302') !== false;
 
     if (get('allow_input') == false) {
-        write("<comment>
+        writeln("<comment>
     ========================================================================
         Deployment triggered non-interactively.
         If this task fails a rollback will be automatically triggered
-    ========================================================================</comment>
-");
+    ========================================================================</comment>");
     }
 
     if ($is_200_ok or $is_401) {
-        write("<info>
+        writeln("<info>
     ========================================================================
         $domain responded with $response
-    ========================================================================</info>
-");
+    ========================================================================</info>");
         $confirm = false;
     } elseif ($is_3XX_redirect) {
-        write("<comment>
+        writeln("<comment>
     ========================================================================
         WARNING: 'wp_home_url' for '$stage' may not be exactly right!
         $domain responded with $response
-    ========================================================================</comment>
-");
+    ========================================================================</comment>");
         if (get('allow_input')) {
             $confirm = askConfirmation('Do you want to rollback?', false);
         } else {
             $confirm = false;
         }
     } else {
-        write("<error>
+        writeln("<error>
     ========================================================================
         ERROR: Website is not responding after a deployment
         $domain responded with $response
-    ========================================================================</error>
-");
+    ========================================================================</error>");
         if (get('allow_input')) {
             $confirm = askConfirmation('Do you want to rollback?', false);
         } else {
