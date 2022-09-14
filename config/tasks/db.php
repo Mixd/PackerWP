@@ -310,7 +310,7 @@ task('db:confirm', function () {
     $params = get_env_vars($stage);
     $db_name = $params['db_name'];
 
-    write(
+    writeln(
         "<error>
     ========================================================================
         WARNING: You're about to overwrite the database!
