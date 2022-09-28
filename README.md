@@ -57,10 +57,14 @@ Run `cp ./vendor/mixd/packerwp/config/deploy.example.json ./deploy.json` to get 
 
 Go ahead and start populating it.
 
+Now, add a symbolic link to the root of the project to link up the custom Deployer tasks. `ln -s vendor/mixd/packerwp/deploy.php`.
+
+You should now be able to run `dep` and see a list of all the available tasks.
+
 ### Tasks
 
 #### Initial WordPress Installation
-Once you have your `deploy.json` file set up, you can install WordPress by running
+Once you have your environment set up, you can install WordPress by running
 
 ```
 $ dep setup-local-wp
@@ -125,7 +129,17 @@ $ dep deploy [stage]
 ```
 
 By default, PackerWP is configured to name every release using PHP's
-[date](https://www.php.net/manual/en/function.date.php) function in the following format `YmdHis`.
+[date](https://www.php.net/manual/en/function.date.php) function in the following format `Ymd`.
+
+## Templates
+
+PackerWP also supports wp-config.php extras. If you want to override the WP Config extras that get added during the `dep setup-wp` task then do the following:
+
+Create the templates folder: `mkdir ./templates/`
+
+Copy the bundled WP Extras file: `cp vendor/mixd/packerwp/config/templates/extras.php ./templates/extras.php`
+
+Now you can edit the extras file. Be sure to commit and push this file to Github so it persists for other developers.
 
 ## Contributing
 
