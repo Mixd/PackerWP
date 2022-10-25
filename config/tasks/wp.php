@@ -394,8 +394,6 @@ function wp_core_install(
         );
     }
 
-    run('{{bin/wp}} site empty --yes');
-
     return $result;
 }
 
